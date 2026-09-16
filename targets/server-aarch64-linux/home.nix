@@ -19,6 +19,7 @@
     ../../home/tmux
   ];
 
+  custom.target = "server-aarch64-linux";
   home.username = "ag";
   home.homeDirectory = "/home/ag";
   targets.genericLinux.enable = true;

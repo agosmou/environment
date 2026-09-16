@@ -24,7 +24,7 @@ $ which nvim
     ├── home-path/bin/    every command this environment provides, each a
     │                     symlink to its package
     ├── home-files/       the targets of the ~/.config symlinks
-    └── activate          the script that a switch runs
+    └── activate          the script that `just apply` runs
     │
     ▼
 /nix/store/...-neovim-0.12.5/bin/nvim
@@ -38,11 +38,12 @@ Three layers, each answering a different question:
 | Generation | `~/.local/state/nix/profiles/home-manager-N-link` | One snapshot of this environment: symlinks to exactly the packages and files the modules declared at that switch. Old generations stay, which is what makes rollback instant. |
 | PATH | `~/.nix-profile/bin` | The one directory the shell searches. Points at the current generation. |
 
-A switch builds a new generation and repoints the symlinks. It never edits a
+An apply builds a new generation and repoints the symlinks. It never edits a
 file in place, so a failed build leaves the current generation untouched.
 
 ```bash
-# Build and activate a new generation from this repository
+# Build and activate a new generation from this repository (`just apply`).
+# Home Manager's own word for it is "switch", as in switch generations.
 nix run home-manager -- switch --flake .#ag@workstation-x86_64-linux
 
 # Every generation, newest last; roll back by activating an older one
@@ -72,7 +73,7 @@ files, not configuration, and they are not in this repository.
 
 Home Manager writes the files under `~/.config` as symlinks into the Nix
 store; the files on disk are build output, not source. To change one, edit
-its module under `home/` and re-run the switch. Editing the symlink target
+its module under `home/` and run `just apply` again. Editing the symlink target
 fails because the store is read-only.
 
 Two styles are in use, and both are legitimate:

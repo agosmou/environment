@@ -73,6 +73,7 @@
         testPkgs.runCommand "environment-script-lint"
           {
             nativeBuildInputs = [
+              testPkgs.just
               testPkgs.shellcheck
               testPkgs.zsh
             ];
@@ -80,6 +81,8 @@
           ''
             shellcheck \
               ${./bootstrap} \
+              ${./scripts/doctor} \
+              ${./scripts/inventory} \
               ${./platform/fedora/bootstrap.sh} \
               ${./platform/darwin/bootstrap.sh} \
               ${./tests/bootstrap.sh} \
@@ -87,6 +90,7 @@
             zsh -n \
               ${./home/shell/functions.sh} \
               ${./home/shell/zsh-keybindings.zsh}
+            just --justfile ${./justfile} --list >/dev/null
             touch $out
           '';
 
@@ -126,6 +130,31 @@
       });
 
       formatter = forAllSystems (system: (pkgsFor system).nixfmt);
+
+      # Tools for EDITING this repository, as opposed to everything above,
+      # which describes the machine. `nix develop` opens a subshell with
+      # these on PATH without installing anything. Needed in two situations
+      # only: a fresh clone before the first apply (`nix develop -c just
+      # check`, since just is not installed yet), and CI. On an applied
+      # machine, just is already on PATH and `just fmt` runs nixfmt itself.
+      #   just        the command runner
+      #   nixfmt      formats .nix files; not wanted on the normal PATH
+      #   shellcheck  lints the scripts; Neovim has its own private copy
+      devShells = forAllSystems (
+        system:
+        let
+          pkgs = pkgsFor system;
+        in
+        {
+          default = pkgs.mkShell {
+            packages = [
+              pkgs.just
+              pkgs.nixfmt
+              pkgs.shellcheck
+            ];
+          };
+        }
+      );
 
       checks = {
         x86_64-linux = {

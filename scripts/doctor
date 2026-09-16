@@ -1,0 +1,291 @@
+#!/usr/bin/env bash
+#
+# doctor: compare the running machine against what the repository declares.
+#
+#   scripts/doctor <full-target>
+#   just doctor
+#
+# READ-ONLY. It changes nothing; it prints one line per check, "ok" or
+# "fail", and exits with the number of failures. Where inventory answers
+# "what should be here", doctor answers "is it actually here, and is there
+# anything here that should not be".
+#
+# What it checks:
+#   - the target matches this machine's CPU and OS
+#   - every command the modules install is on PATH
+#   - Home Manager's profile and the config symlinks it manages exist
+#   - Neovim's Lua parses and its language servers are present
+#   - workstation only: the desktop tools, keyd's installed copies match the
+#     repository, the GPU rule is in place
+#   - Fedora: every package in platform/fedora/packages is installed, and
+#     nothing was hand-installed with dnf outside that list (drift)
+#   - macOS: the Brewfile is fully installed and brew has nothing extra (drift)
+#
+# Drift is reported, never fixed: add the package to the manifest or remove
+# it yourself.
+
+# -u: unset variables are errors. -o pipefail: a pipeline fails if any command
+# in it fails. NOT -e: a failing check must be recorded and the script must
+# continue to the next one.
+set -uo pipefail
+
+target="${1:-}"
+repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+failures=0
+checks=0
+
+if [[ -z "$target" ]]; then
+  printf 'Usage: doctor <full-target>\n' >&2
+  exit 2
+fi
+
+pass() {
+  ((checks += 1))
+  printf 'ok   %s\n' "$1"
+}
+
+fail() {
+  ((checks += 1))
+  ((failures += 1))
+  printf 'fail %s\n' "$1" >&2
+}
+
+check_command() {
+  if command -v "$1" >/dev/null 2>&1; then
+    pass "$1 is available"
+  else
+    fail "$1 is unavailable"
+  fi
+}
+
+# Print a manifest file (platform/fedora/packages, platform/fedora/baseline)
+# with comment lines and blank lines removed, one name per line.
+manifest() {
+  grep -v -E '^[[:space:]]*(#|$)' "$1" || true
+}
+
+# Drift check for dnf. Two directions:
+#   missing  a name in platform/fedora/packages that rpm does not know about
+#   orphan   a package dnf recorded as installed by a person (reason "User")
+#            that is in neither packages nor baseline
+# Orphans are reported, never removed: add them to a manifest or run
+# `sudo dnf remove` yourself. Skipped silently on non-dnf systems.
+check_dnf_drift() {
+  command -v dnf >/dev/null 2>&1 || return 0
+
+  local packages_file="$repo_dir/platform/fedora/packages"
+  local baseline_file="$repo_dir/platform/fedora/baseline"
+  local name
+
+  while read -r name; do
+    if rpm -q "$name" >/dev/null 2>&1; then
+      pass "dnf package $name is installed"
+    else
+      fail "dnf package $name is missing (run: just bootstrap $target)"
+    fi
+  done < <(manifest "$packages_file")
+
+  # `comm -23 A B` prints lines only in A. Both inputs must be sorted.
+  # A = packages dnf marks as user-installed on this machine.
+  # B = everything the repository knows about (packages + baseline).
+  local orphans
+  orphans="$(comm -23 \
+    <(dnf repoquery --installed --qf '%{name} %{reason}\n' 2>/dev/null |
+      awk '$2 == "User" { print $1 }' | sort -u) \
+    <(cat <(manifest "$packages_file") <(manifest "$baseline_file") | sort -u))"
+
+  if [[ -z "$orphans" ]]; then
+    pass "no dnf packages installed outside platform/fedora/packages"
+  else
+    fail "dnf packages installed by hand but not in platform/fedora/packages or baseline:"
+    # Print each orphan on its own indented line under the failure message.
+    while read -r name; do printf '       %s\n' "$name" >&2; done <<<"$orphans"
+  fi
+}
+
+# Drift check for Homebrew, same two directions using brew's own tooling:
+#   `brew bundle check`   exits non-zero if the Brewfile is not fully installed
+#   `brew bundle cleanup` WITHOUT --force only prints what it would uninstall,
+#                         i.e. everything brew has that the Brewfile does not
+check_brew_drift() {
+  command -v brew >/dev/null 2>&1 || return 0
+
+  local brewfile="$repo_dir/platform/darwin/Brewfile"
+  local name
+
+  if brew bundle check --file "$brewfile" >/dev/null 2>&1; then
+    pass "Brewfile is fully installed"
+  else
+    fail "Brewfile has missing entries (run: just bootstrap $target)"
+  fi
+
+  local orphans
+  orphans="$(brew bundle cleanup --file "$brewfile" 2>/dev/null || true)"
+  if [[ -z "$orphans" ]]; then
+    pass "no Homebrew packages installed outside the Brewfile"
+  else
+    fail "Homebrew packages installed by hand but not in the Brewfile:"
+    # Print each orphan on its own indented line under the failure message.
+    while read -r name; do printf '       %s\n' "$name" >&2; done <<<"$orphans"
+  fi
+}
+
+case "$(uname -m)" in
+  x86_64|amd64) architecture="x86_64" ;;
+  arm64|aarch64) architecture="aarch64" ;;
+  *) architecture="unsupported" ;;
+esac
+
+case "$(uname -s)" in
+  Linux) kernel="linux" ;;
+  Darwin) kernel="darwin" ;;
+  *) kernel="unsupported" ;;
+esac
+
+system="${architecture}-${kernel}"
+if [[ "$target" == *"-${system}" ]]; then
+  pass "target matches $system"
+else
+  fail "target $target does not match $system"
+fi
+
+# Every command the modules under home/ put on PATH. If one is missing, a
+# module was removed from the target, the apply failed, or PATH is wrong.
+for command in \
+  curl git git-lfs gh just nvim starship tmux \
+  atuin bat btop delta eza fastfetch fd fzf jaq jq lazygit rg sesh yazi zoxide
+do
+  check_command "$command"
+done
+
+profile="$HOME/.local/state/nix/profiles/home-manager"
+if [[ -e "$profile" || -L "$profile" ]]; then
+  pass "Home Manager profile exists"
+else
+  fail "Home Manager profile is missing"
+fi
+
+case "$target" in
+  workstation-*-linux)
+    check_command bash
+    check_command ghostty
+    check_command keyd
+    check_command rustdesk
+
+    check_dnf_drift
+
+    ghostty_config="$HOME/.config/ghostty/config"
+    if [[ -L "$ghostty_config" && -e "$ghostty_config" ]]; then
+      pass "Ghostty configuration symlink is valid"
+    else
+      fail "Ghostty configuration symlink is invalid"
+    fi
+
+    if command -v keyd >/dev/null 2>&1 &&
+      keyd check "$repo_dir/platform/fedora/keyd/default.conf" >/dev/null 2>&1
+    then
+      pass "keyd configuration is valid"
+    else
+      fail "keyd configuration is invalid"
+    fi
+
+    if command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet keyd.service; then
+      pass "keyd service is active"
+    else
+      fail "keyd service is inactive"
+    fi
+
+    # The copies platform/fedora/bootstrap.sh placed under /etc and /usr/local
+    # must match what Home Manager and the repository currently have; if not,
+    # a keyd update or config edit has not been applied with a bootstrap run.
+    if cmp -s "$HOME/.nix-profile/bin/keyd" /usr/local/bin/keyd-nix; then
+      pass "installed keyd binary matches Home Manager"
+    else
+      fail "installed keyd binary is stale"
+    fi
+
+    if cmp -s "$repo_dir/platform/fedora/keyd/default.conf" /etc/keyd/default.conf; then
+      pass "installed keyd configuration matches repository"
+    else
+      fail "installed keyd configuration is stale"
+    fi
+
+    if cmp -s "$repo_dir/platform/fedora/keyd/keyd.service" /etc/systemd/system/keyd.service; then
+      pass "installed keyd service matches repository"
+    else
+      fail "installed keyd service is stale"
+    fi
+
+    # /etc/tmpfiles.d/non-nixos-gpu.conf must point at the rule inside the
+    # current Home Manager generation, otherwise /run/opengl-driver is stale.
+    gpu_setup="$HOME/.nix-profile/bin/non-nixos-gpu-setup"
+    gpu_root="$(dirname "$(dirname "$(readlink -f "$gpu_setup")")")"
+    expected_gpu_conf="$gpu_root/lib/tmpfiles.d/non-nixos-gpu.conf"
+    if [[ "$(readlink -f /etc/tmpfiles.d/non-nixos-gpu.conf)" == "$expected_gpu_conf" ]]; then
+      pass "non-NixOS GPU integration matches Home Manager"
+    else
+      fail "non-NixOS GPU integration is stale or missing"
+    fi
+
+    ;;
+  workstation-*-darwin)
+    check_command zsh
+    check_command brew
+    check_command ghostty
+
+    if [[ -d /Applications/RustDesk.app ]]; then
+      pass "RustDesk application is installed"
+    else
+      fail "RustDesk application is missing"
+    fi
+
+    check_brew_drift
+
+    ghostty_config="$HOME/.config/ghostty/config"
+    if [[ -L "$ghostty_config" && -e "$ghostty_config" ]]; then
+      pass "Ghostty configuration symlink is valid"
+    else
+      fail "Ghostty configuration symlink is invalid"
+    fi
+    ;;
+  server-*-linux)
+    check_command bash
+    pass "server target has no desktop health checks"
+    ;;
+  *)
+    fail "unknown target $target"
+    ;;
+esac
+
+# Home Manager manages these as symlinks into the Nix store. A regular file
+# here means something overwrote the symlink; a dangling one means the
+# generation it pointed at was garbage-collected.
+tmux_config="$HOME/.config/tmux/tmux.conf"
+if [[ -L "$tmux_config" && -e "$tmux_config" ]]; then
+  pass "tmux configuration symlink is valid"
+else
+  fail "tmux configuration symlink is invalid"
+fi
+
+nvim_config="$HOME/.config/nvim/init.lua"
+if [[ -L "$nvim_config" && -e "$nvim_config" ]]; then
+  pass "Neovim configuration symlink is valid"
+else
+  fail "Neovim configuration symlink is invalid"
+fi
+
+# Two Neovim checks in one headless run: every Lua file under the config
+# parses, and every external tool the config expects (language servers,
+# formatters, ripgrep, a C compiler for tree-sitter) is on Neovim's PATH.
+if nvim --clean --headless -u NONE -i NONE \
+  '+lua local root=vim.fn.stdpath("config"); local files=vim.fn.glob(root.."/**/*.lua",false,true); if #files==0 then vim.api.nvim_err_writeln("no Lua files found"); vim.cmd.cquit() end; for _,f in ipairs(files) do local chunk,err=loadfile(f); if not chunk then vim.api.nvim_err_writeln(f..": "..tostring(err)); vim.cmd.cquit() end end' \
+  '+lua for _,x in ipairs({"git","curl","tar","gzip","unzip","rg","fd","lazygit","tree-sitter","cc","pyright-langserver","lua-language-server","stylua","ruff","black","markdownlint-cli2"}) do if vim.fn.executable(x)~=1 then vim.api.nvim_err_writeln("missing executable: "..x); vim.cmd.cquit() end end' \
+  +qa >/dev/null 2>&1
+then
+  pass "Neovim Lua and dependencies are valid"
+else
+  fail "Neovim Lua or dependency validation failed"
+fi
+
+printf '\n%d checks, %d failures\n' "$checks" "$failures"
+exit "$failures"

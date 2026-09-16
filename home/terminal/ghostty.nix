@@ -12,7 +12,7 @@
   # ~/.nix-profile/share/applications, and Home Manager's genericLinux target
   # puts that directory (and ~/.nix-profile/bin) into the GNOME session via
   # ~/.config/environment.d, so the app grid and search find it. Log out and
-  # in once after the first switch on a new machine for that to take effect.
+  # in once after the first apply on a new machine for that to take effect.
 
   programs.ghostty = {
     enable = true;

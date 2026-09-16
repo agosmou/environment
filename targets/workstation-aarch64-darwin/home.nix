@@ -26,6 +26,7 @@
   # Print the machine summary when a terminal window opens (not per tmux pane).
   custom.fastfetch.greeting = true;
 
+  custom.target = "workstation-aarch64-darwin";
   home.username = "ag";
   home.homeDirectory = "/Users/ag";
 }

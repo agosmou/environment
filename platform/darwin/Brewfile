@@ -12,4 +12,5 @@
 cask "ghostty"
 
 # Remote desktop. nixpkgs marks RustDesk unsupported on Apple Silicon.
+# After install, grant its macOS permissions: docs/remote-access.md.
 cask "rustdesk"

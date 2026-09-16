@@ -4,6 +4,7 @@
 #
 # Plain package: nothing to configure. Its own settings and the unattended
 # access password are set in the app and stay on the machine.
+# Setup and connecting: docs/remote-access.md.
 { pkgs, ... }:
 
 {

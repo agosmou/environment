@@ -29,6 +29,7 @@
   # Print the machine summary when a terminal window opens (not per tmux pane).
   custom.fastfetch.greeting = true;
 
+  custom.target = "workstation-x86_64-linux";
   home.username = "ag";
   home.homeDirectory = "/home/ag";
   targets.genericLinux.enable = true;

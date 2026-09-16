@@ -25,26 +25,54 @@ broken environment.
 4. Later, CI runs the same command on a clean clone, so "works on my machine
    but I forgot to commit a file" is caught too.
 
-The daily loop is therefore: **edit, check, switch.**
+The daily loop is therefore: **edit, check, apply.**
 
-## Bootstrap
+## New Machine
 
-On a machine with nothing on it:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/agosmou/environment/main/bootstrap \
-  | bash -s -- --target workstation
-```
-
-Use `--target server` for a server. The script detects the CPU and OS,
-installs Nix (Fedora's own package on Fedora, the upstream nixos.org installer
-elsewhere), clones this repository into `~/environment`, activates the
-matching target, and runs the platform step for the OS. Re-running it from
-the clone is safe:
+One command on a machine with nothing on it. Pick the line for the machine:
 
 ```bash
-./bootstrap --target workstation
+# Fedora workstation
+curl -fsSL https://raw.githubusercontent.com/agosmou/environment/main/bootstrap | bash -s -- --target workstation
+
+# Apple Silicon Mac
+curl -fsSL https://raw.githubusercontent.com/agosmou/environment/main/bootstrap | bash -s -- --target workstation
+
+# Linux server, x86 or ARM (a Pi)
+curl -fsSL https://raw.githubusercontent.com/agosmou/environment/main/bootstrap | bash -s -- --target server
 ```
+
+`workstation` and `server` resolve to the full target for the machine's CPU
+and OS (`workstation-x86_64-linux`, `workstation-aarch64-darwin`,
+`server-x86_64-linux`, `server-aarch64-linux`). The script installs Nix
+(Fedora's own package on Fedora, the upstream nixos.org installer elsewhere),
+clones this repository into `~/environment`, activates the target, and runs
+the platform step for the OS.
+
+Then three one-time steps that put your identity on the machine. They are
+deliberately not in the repository, so it can be public.
+
+1. **Log in to GitHub.** Opens a browser, stores a token in
+   `~/.config/gh/hosts.yml`:
+
+   ```bash
+   gh auth login
+   ```
+
+2. **Tell git who you are.** Create this file with your name and email (the
+   directory `local/` is gitignored):
+
+   ```ini
+   # ~/environment/local/gitconfig.local
+   [user]
+       name = Your Name
+       email = you@example.com
+   ```
+
+3. **Fedora only: log out of GNOME and log back in.** The desktop session
+   reads the Nix profile's paths at login, so until you do this, Nix-installed
+   apps (Ghostty, RustDesk) are missing from the app grid and Super-search,
+   even though they run from a terminal. Once, after the first bootstrap.
 
 The platform step is the only part that needs root, and it is small:
 
@@ -80,18 +108,99 @@ functions, prompt, and command-line tools from `home/shell/`, where every
 tool is one file: `ls home/shell/` is the list of what is installed, and
 removing a tool is deleting its file and its import line in `targets/`.
 
-## Commands
+## Daily Loop
+
+Editing a file under `home/` changes nothing on the machine by itself: the
+repository is a description, and `apply` is what turns it into a new Home
+Manager generation and points the home directory at it. So every change is:
 
 ```bash
-# Check: every target evaluates, the native ones build, the lints pass
-nix flake check --all-systems --no-build
-nix flake check
-
-# Switch: build and activate a target on this machine
-nix run home-manager -- switch --flake .#ag@workstation-x86_64-linux
+# 1. edit something, e.g. add a package to home/shell/tools.nix
+just check     # 2. does it build? lints, every target evaluates
+just apply     # 3. make it real on this machine
 ```
+
+The machine knows which target it is: the first bootstrap records it at
+`~/.config/environment/target`, and every recipe reads that. Pass a target
+explicitly only to work on another machine's configuration, e.g.
+`just build server-aarch64-linux`.
+
+To confirm the machine matches what the repository says (after an apply, or
+on a machine you have not touched in a while):
+
+```bash
+just doctor
+```
+
+`just` alone lists every recipe.
+
+## When Something Is Wrong
+
+Every apply creates a new generation and keeps the old ones, so a bad
+apply is undone by going back one:
+
+```bash
+just rollback        # activate the previous generation; nothing is rebuilt
+just generations     # see them all, newest first
+```
+
+The repository is unchanged by a rollback. Fix the file, `just check`,
+`just apply` again. See [docs/nix.md](docs/nix.md) for what a generation is.
+
+## Updating Packages
+
+Nothing changes version on its own: `flake.lock` pins the exact nixpkgs and
+Home Manager commits. To move forward:
+
+```bash
+just update          # rewrite flake.lock to the newest commits
+just check
+just apply
+# use the machine for a bit
+git commit flake.lock -m "Update nixpkgs and home-manager"
+```
+
+If the update broke something: `just rollback`, `git checkout flake.lock`,
+`just apply`. Do this from a clean working tree so `flake.lock` is the only
+change.
+
+## Before Committing
+
+```bash
+just fmt             # format every .nix file
+just secrets         # scan for anything that looks like a token
+just check
+```
+
+Before the first apply on a new clone, `just` is not installed yet; run
+recipes through the development shell: `nix develop -c just check`.
+
+## What Is On A Machine
+
+Everything a target installs is declared in exactly three places, split by
+who needs root:
+
+| Owner | Declared in | Applied by |
+|---|---|---|
+| Home Manager | `home/**.nix` | `just apply` |
+| dnf (Fedora) | `platform/fedora/packages` | `just bootstrap` |
+| Homebrew (macOS) | `platform/darwin/Brewfile` | `just bootstrap` |
+
+`just inventory` prints all of it, evaluated from the flake rather
+than from a hand-kept list: Home Manager packages, every file Home Manager
+places in the home directory, the root-level manifest for that OS, and the
+repository tree. `just doctor` compares the running machine against
+the same declarations and fails on drift in both directions: declared but
+missing, or installed by hand but not declared. Doctor only reports; nothing
+is removed automatically.
+
+To add or remove a tool, edit one of the three places and re-run the
+matching command. Home Manager removes what is no longer declared; dnf and
+Homebrew do not, so doctor lists the leftovers until you remove them.
 
 ## Read Next
 
 - [docs/nix.md](docs/nix.md): where Nix puts things, how generations and
   rollback work, and where the config files under `~/.config` come from.
+- [docs/remote-access.md](docs/remote-access.md): SSH and RustDesk between
+  the machines, including the one-time macOS permission setup.

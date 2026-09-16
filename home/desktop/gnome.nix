@@ -2,8 +2,8 @@
 # settings database; the same values `gsettings` or Settings would set).
 # Linux workstation only.
 #
-# Home Manager module: writes these keys at every switch, so a value changed
-# in Settings by hand is reverted next switch. Add it here instead.
+# Home Manager module: writes these keys at every apply, so a value changed
+# in Settings by hand is reverted next apply. Add it here instead.
 { lib, ... }:
 
 {

@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+#
+# inventory — print everything this repository declares for one target.
+#
+#   scripts/inventory workstation-x86_64-linux
+#   just inventory
+#
+# This is a READ-ONLY view. It changes nothing. It answers "what should be on
+# a machine built from this repo, and who installs it?" There are three owners:
+#
+#   Home Manager  home/**.nix                user packages + files in $HOME
+#   dnf           platform/fedora/packages   root-level packages on Fedora
+#   Homebrew      platform/darwin/Brewfile   root-level apps on macOS
+#
+# The Home Manager sections are evaluated from the flake, not from a
+# hand-maintained list, so they cannot drift from what `just apply` installs.
+# To see what is ACTUALLY on the current machine vs. this, run `just doctor`.
+
+# -e: stop on the first failing command.  -u: unset variables are errors.
+# -o pipefail: a pipeline fails if any command in it fails, not just the last.
+set -euo pipefail
+
+target="${1:-}"
+
+# Directory containing this repo, derived from where this script lives, so it
+# works no matter which directory you run it from.
+repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if [[ -z "$target" ]]; then
+  printf 'Usage: inventory <full-target>\n' >&2
+  printf 'Targets:\n' >&2
+  ls -1 "$repo_dir/targets" >&2
+  exit 2
+fi
+
+[[ -d "$repo_dir/targets/$target" ]] || {
+  printf 'inventory: unknown target %s\n' "$target" >&2
+  exit 2
+}
+
+# Home Manager configuration attribute for this target, e.g.
+# homeConfigurations."ag@workstation-x86_64-linux". The "path:" prefix makes
+# Nix read the working tree as-is, including files not yet committed to git.
+config="path:$repo_dir#homeConfigurations.\"ag@$target\".config"
+
+# Print a section header.
+section() {
+  printf '\n== %s ==\n' "$1"
+}
+
+# Print a manifest file with comments and blank lines stripped, so the output
+# is just names. Used for platform/fedora/packages and the Brewfile.
+manifest() {
+  grep -v -E '^[[:space:]]*(#|$)' "$1" || true
+}
+
+# Ask Nix for a value from the Home Manager config. $1 is a Nix function
+# applied to the config; it must return a string. --raw prints that string
+# without quotes. `nix eval` only evaluates, it never builds or installs.
+hm_eval() {
+  nix --extra-experimental-features 'nix-command flakes' \
+    eval --raw --no-warn-dirty "$config" --apply "$1"
+}
+
+printf 'Inventory for %s\n' "$target"
+printf 'Repository: %s\n' "$repo_dir"
+
+# --- Home Manager packages ---------------------------------------------------
+# Every derivation in home.packages plus what programs.*.enable pulled in.
+# `p.name` is "pname-version" like "ripgrep-15.2.0". Home Manager adds a few
+# internal placeholder packages (dummy-*, hm-session-vars.sh, its own
+# manpage); those are filtered out because nobody chose them.
+section 'Home Manager packages (home/**.nix)'
+hm_eval 'c:
+  let
+    internal = n:
+      builtins.substring 0 6 n == "dummy-"
+      || n == "hm-session-vars.sh"
+      || n == "home-configuration-reference-manpage";
+    names = builtins.filter (n: !internal n) (map (p: p.name) c.home.packages);
+  in builtins.concatStringsSep "\n" (builtins.sort builtins.lessThan names)'
+printf '\n'
+
+# --- Home Manager files ------------------------------------------------------
+# Every file or symlink Home Manager places under $HOME. Home Manager stores
+# some keys as absolute paths (/home/ag/.config/...) and some relative
+# (.bashrc), so the home directory prefix is stripped to make them uniform.
+section 'Home Manager files in the home directory (symlinks into the Nix store)'
+hm_eval 'c:
+  let
+    home = c.home.homeDirectory + "/";
+    strip = f:
+      if builtins.substring 0 (builtins.stringLength home) f == home
+      then builtins.substring (builtins.stringLength home) (-1) f
+      else f;
+    names = map strip (builtins.attrNames c.home.file);
+  in builtins.concatStringsSep "\n" (builtins.sort builtins.lessThan names)'
+printf '\n'
+
+# --- Root-level packages ----------------------------------------------------
+# These are the only things installed outside Nix. Which manifest applies
+# depends on the OS in the target name.
+case "$target" in
+  workstation-*-linux)
+    section 'dnf packages (platform/fedora/packages)'
+    manifest "$repo_dir/platform/fedora/packages"
+    ;;
+  workstation-*-darwin)
+    section 'Homebrew (platform/darwin/Brewfile)'
+    manifest "$repo_dir/platform/darwin/Brewfile"
+    ;;
+  *)
+    section 'Root-level packages'
+    printf '(none: server targets are Home Manager only)\n'
+    ;;
+esac
+
+# --- Repository files --------------------------------------------------------
+# Everything git tracks plus new files not yet added. This replaces keeping a
+# tree listing by hand. Ignored files (build output, secrets) are not shown.
+section 'Repository files (git ls-files)'
+git -C "$repo_dir" ls-files --cached --others --exclude-standard | sort

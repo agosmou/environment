@@ -20,7 +20,7 @@
 #     do, so this is effectively "apply the root-level layer again". Run it
 #     after changing anything under platform/ (a dnf package, the keyd
 #     config, the Brewfile). For changes under home/ you do not need it:
-#     that is what `switch` is for.
+#     that is what `just apply` is for.
 #
 # What it does, in order:
 #   1. Work out which target this machine is (workstation or server, and
