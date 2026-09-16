@@ -36,6 +36,11 @@ The daily loop is therefore: **edit, check, switch.**
 | `server-x86_64-linux` | x86 Linux server |
 | `server-aarch64-linux` | ARM Linux server |
 
+Linux targets use bash; the Mac uses zsh. Both get the same aliases,
+functions, prompt, and command-line tools from `home/shell/`, where every
+tool is one file: `ls home/shell/` is the list of what is installed, and
+removing a tool is deleting its file and its import line in `targets/`.
+
 ## Commands
 
 ```bash

@@ -53,6 +53,40 @@
       };
 
       testPkgs = pkgsFor "x86_64-linux";
+
+      # ---- Checks ----------------------------------------------------------
+      # A check is a small test that `nix flake check` runs. If any check
+      # fails, the command fails. They exist so a mistake in this repository
+      # is caught by running one command, before it is applied to a machine
+      # where it would break the shell or the editor.
+      #
+      # Each check runs in a sandbox with only the tools listed under
+      # nativeBuildInputs, so it gives the same answer on every machine and
+      # in CI. `touch $out` at the end just tells Nix the check produced its
+      # (empty) result.
+
+      # Why: a typo in functions.sh or the zsh keybindings would otherwise
+      # only show up as an error the next time a terminal opens, on every
+      # machine. shellcheck reads the bash file for common mistakes; `zsh -n`
+      # parses the zsh files without running them.
+      scriptLint =
+        testPkgs.runCommand "environment-script-lint"
+          {
+            nativeBuildInputs = [
+              testPkgs.shellcheck
+              testPkgs.zsh
+            ];
+          }
+          ''
+            shellcheck ${./home/shell/functions.sh}
+            zsh -n \
+              ${./home/shell/functions.sh} \
+              ${./home/shell/zsh-keybindings.zsh}
+            touch $out
+          '';
+      # Why: a Lua syntax error in the Neovim config would otherwise only
+      # show up when Neovim starts. This parses every Lua file without
+      # running it and fails on the first one that does not parse.
       neovimLua =
         testPkgs.runCommand "environment-neovim-lua" { nativeBuildInputs = [ testPkgs.neovim ]; }
           ''
@@ -75,6 +109,7 @@
       checks = {
         x86_64-linux = {
           neovim-lua = neovimLua;
+          scripts = scriptLint;
           workstation = workstationLinux.activationPackage;
           server = serverX86Linux.activationPackage;
         };
