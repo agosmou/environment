@@ -9,6 +9,7 @@
 
 {
   home.packages = [ pkgs.wl-clipboard ];
+  custom.smoke.wl-copy = "wl-copy --version";
 
   programs.bash.shellAliases = {
     copy = "wl-copy";

@@ -6,6 +6,9 @@
 
 {
   home.packages = [ pkgs.nerd-fonts.jetbrains-mono ];
+  # On macOS the binary comes from Homebrew, outside Home Manager, so there
+  # is nothing in the generation to smoke-test there.
+  custom.smoke = lib.mkIf pkgs.stdenv.hostPlatform.isLinux { ghostty = "ghostty --version"; };
   fonts.fontconfig.enable = lib.mkIf pkgs.stdenv.hostPlatform.isLinux true;
 
   # No GNOME launcher is needed: Ghostty's own .desktop file lands in

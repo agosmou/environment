@@ -7,6 +7,8 @@
 { ... }:
 
 {
+  custom.smoke.gh = "gh --version";
+
   programs.gh = {
     enable = true;
     # Let git use gh's login for GitHub over HTTPS, so no separate token is

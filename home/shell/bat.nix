@@ -6,4 +6,5 @@
 
 {
   programs.bat.enable = true;
+  custom.smoke.bat = "bat --version";
 }

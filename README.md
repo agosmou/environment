@@ -22,8 +22,10 @@ broken environment.
    Neovim Lua parse). Those checks catch what Nix alone cannot see: Nix will
    happily install a script with a syntax error, because to Nix it is just a
    file.
-4. Later, CI runs the same command on a clean clone, so "works on my machine
-   but I forgot to commit a file" is caught too.
+4. CI runs the same command on a clean clone, on one runner per CPU and OS
+   (x86 Linux, ARM Linux, Apple Silicon), so "works on my machine but I
+   forgot to commit a file" is caught, and the Mac and ARM configurations
+   are built and their tools run before any real machine gets them.
 
 The daily loop is therefore: **edit, check, apply.**
 
@@ -91,7 +93,7 @@ Everything else on a machine comes from Home Manager and needs no root.
 | `home/git/`, `home/ssh/` | git, gh, ssh |
 | `home/neovim/`, `home/tmux/`, `home/terminal/` | editor, multiplexer, Ghostty |
 | `home/desktop/` | things that need a screen: GNOME settings, clipboard, remote desktop; workstation targets only |
-| `home/ai/` | the coding agents: OpenCode, Claude Code, Codex, and the skills all three share (`skills.nix`) |
+| `home/ai/` | the coding agents: OpenCode, Claude Code, Codex, and the skills all three share (`skills/`) |
 | `targets/` | one file per machine type, listing exactly which of the above it imports |
 | `platform/` | the root-level layer per OS: dnf and Homebrew manifests, keyd, the scripts that apply them |
 

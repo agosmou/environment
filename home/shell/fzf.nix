@@ -6,6 +6,8 @@
 { ... }:
 
 {
+  custom.smoke.fzf = "fzf --version";
+
   programs.fzf = {
     enable = true;
     # fzf's own Ctrl-R history search. Empty string disables it because atuin

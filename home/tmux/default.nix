@@ -48,6 +48,10 @@ in
 
   config = {
     home.packages = [ pkgs.sesh ] ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [ pkgs.procps ];
+    custom.smoke = {
+      tmux = "tmux -V";
+      sesh = "sesh --version";
+    };
 
     programs.tmux = {
       enable = true;

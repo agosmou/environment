@@ -6,7 +6,7 @@
     ../../home/ai/claude-code.nix
     ../../home/ai/codex.nix
     ../../home/ai/opencode.nix
-    ../../home/ai/skills.nix
+    ../../home/ai/skills
     ../../home/git/gh.nix
     ../../home/git/git.nix
     ../../home/neovim

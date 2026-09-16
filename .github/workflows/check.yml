@@ -1,0 +1,104 @@
+# Runs `nix flake check` from a clean clone on every push to main and every
+# pull request, on one runner per CPU/OS the repository targets.
+#
+# A clean clone is the point: a file that exists locally but was never
+# committed makes `just check` pass on the laptop and fail on every other
+# machine. CI has only what git has.
+#
+# What each runner's `nix flake check` covers (see checks in flake.nix):
+#   - every target evaluates (the lints, bootstrap tests, Neovim Lua parse)
+#   - the targets for that runner's system build
+#   - the smoke check: every installed command runs on that CPU and OS
+#
+# Why three runners when Nix is the same everywhere: Nix makes the RECIPE
+# identical on every machine; it does not make the RESULT run. A package
+# can build for Apple Silicon and still crash there. The laptop can only
+# build and run x86 Linux, so the Mac and ARM configurations are never
+# executed anywhere until a real Mac or Pi gets them. These two jobs are
+# that machine, ahead of time.
+#
+# What a failure means:
+#   evaluate step fails    a Nix error in a module: typo, unknown package,
+#                          option renamed upstream. Fails on all runners.
+#   build fails            a package does not build for that CPU/OS.
+#   smoke fails            it built but does not run there: "FAILED: <cmd>"
+#                          names the tool; the fix is a different package,
+#                          a platform condition in its module, or an upstream
+#                          issue. This is the one that would otherwise be
+#                          found on the machine.
+#   only one runner fails  the problem is specific to that CPU/OS.
+#
+# What this does NOT test: ./bootstrap end to end (installing Nix, cloning,
+# activating, the dnf/brew step) on an empty machine. The runners are not
+# these machines: user `runner` instead of `ag`, Ubuntu instead of Fedora,
+# no systemd inside a Fedora container. Running the real bootstrap in CI
+# needs a Fedora image with systemd and an `ag` user; planned as its own
+# change. Until then, only bootstrap's target detection is tested
+# (tests/bootstrap.sh).
+#
+# Both installers here are the upstream nixos.org one (cachix/install-nix-
+# action wraps it), matching ./bootstrap.
+#
+# Actions are pinned to commit SHAs, not tags, because tags can be moved.
+# The trailing comment records the tag the SHA was taken from. zizmor audits
+# this file as part of `just check`; find a new pin with:
+#   git ls-remote --tags https://github.com/<owner>/<action>.git
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# No default token permissions; each job asks for what it needs.
+permissions: {}
+
+# A new push to the same branch cancels the run still going for the old one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: x86_64-linux
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Do not leave the workflow token in .git/config; nothing here pushes.
+          persist-credentials: false
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+      # Evaluate every target for every system first: a Nix error anywhere
+      # fails fast here before any runner spends minutes building.
+      - name: evaluate all targets
+        run: nix flake check --all-systems --no-build
+      - name: build and smoke-test
+        run: nix flake check
+
+  linux-arm:
+    name: aarch64-linux
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+      - name: build and smoke-test
+        run: nix flake check
+
+  macos:
+    name: aarch64-darwin
+    runs-on: macos-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+      - name: build and smoke-test
+        run: nix flake check

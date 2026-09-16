@@ -16,6 +16,18 @@
     description = "the target name this machine runs";
   };
 
+  # Every module that installs a command registers how to prove it runs:
+  #   custom.smoke.nvim = "nvim --version";
+  # The flake's smoke check runs every entry from the built generation on
+  # each CPU/OS, and `doctor` checks every name is on PATH. So a tool is
+  # tested by the one line in its own file, and there is no list elsewhere
+  # to keep in sync.
+  options.custom.smoke = lib.mkOption {
+    type = lib.types.attrsOf lib.types.str;
+    default = { };
+    description = "command name to an invocation that exits 0 if the tool runs";
+  };
+
   config = {
     xdg.configFile."environment/target".text = config.custom.target + "\n";
 
@@ -31,6 +43,7 @@
     home.packages = [
       pkgs.just # the command runner for this repository's justfile
     ];
+    custom.smoke.just = "just --version";
 
     xdg.enable = true;
     programs.home-manager.enable = true;

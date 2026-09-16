@@ -8,4 +8,5 @@
 
 {
   programs.codex.enable = true;
+  custom.smoke.codex = "codex --version";
 }

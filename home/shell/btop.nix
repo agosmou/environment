@@ -5,4 +5,5 @@
 
 {
   programs.btop.enable = true;
+  custom.smoke.btop = "btop --version";
 }

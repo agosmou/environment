@@ -13,6 +13,12 @@
 { ... }:
 
 {
+  custom.smoke = {
+    git = "git --version";
+    git-lfs = "git-lfs --version";
+    delta = "delta --version";
+  };
+
   programs.git = {
     enable = true;
     # Git Large File Storage, for repositories that store big binaries.

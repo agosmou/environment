@@ -12,6 +12,8 @@ let
   debugPython = pkgs.python3.withPackages (ps: [ ps.debugpy ]);
 in
 {
+  custom.smoke.nvim = "nvim --version";
+
   programs.neovim = {
     enable = true;
     defaultEditor = true;

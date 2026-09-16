@@ -35,6 +35,7 @@ in
 
   config = {
     programs.fastfetch.enable = true;
+    custom.smoke.fastfetch = "fastfetch --version";
 
     # mkIf: only add these lines to the shell configs when the setting is on.
     programs.bash.initExtra = lib.mkIf cfg.greeting greeting;

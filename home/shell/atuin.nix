@@ -8,6 +8,8 @@
 { ... }:
 
 {
+  custom.smoke.atuin = "atuin --version";
+
   programs.atuin = {
     enable = true;
     # Which keys atuin takes over.

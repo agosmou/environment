@@ -9,4 +9,5 @@
 
 {
   home.packages = [ pkgs.rustdesk ];
+  custom.smoke.rustdesk = "rustdesk --version";
 }

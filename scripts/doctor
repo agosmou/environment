@@ -149,12 +149,19 @@ else
   fail "target $target does not match $system"
 fi
 
-# Every command the modules under home/ put on PATH. If one is missing, a
-# module was removed from the target, the apply failed, or PATH is wrong.
-for command in \
-  claude codex curl git git-lfs gh just nvim opencode starship tmux \
-  atuin bat btop delta eza fastfetch fd fzf jaq jq lazygit rg sesh yazi zoxide
-do
+# Every command the target's modules register in custom.smoke (each module
+# declares its own; see home/common.nix). Asked of the flake so this list
+# can never drift from what is installed. If one is missing here, a module
+# was removed from the target, the apply failed, or PATH is wrong.
+mapfile -t commands < <(
+  nix --extra-experimental-features 'nix-command flakes' eval --raw --no-warn-dirty \
+    "path:$repo_dir#homeConfigurations.\"ag@$target\".config.custom.smoke" \
+    --apply 's: builtins.concatStringsSep "\n" (builtins.attrNames s)' 2>/dev/null
+)
+if ((${#commands[@]} == 0)); then
+  fail "could not read the command list from the flake"
+fi
+for command in "${commands[@]}"; do
   check_command "$command"
 done
 
@@ -168,9 +175,6 @@ fi
 case "$target" in
   workstation-*-linux)
     check_command bash
-    check_command ghostty
-    check_command keyd
-    check_command rustdesk
 
     check_dnf_drift
 
@@ -231,7 +235,7 @@ case "$target" in
   workstation-*-darwin)
     check_command zsh
     check_command brew
-    check_command ghostty
+    check_command ghostty # from Homebrew, so not in custom.smoke
 
     if [[ -d /Applications/RustDesk.app ]]; then
       pass "RustDesk application is installed"

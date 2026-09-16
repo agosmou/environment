@@ -6,6 +6,8 @@
 { ... }:
 
 {
+  custom.smoke.starship = "starship --version";
+
   programs.starship = {
     enable = true;
     # Colour of the AWS profile segment, shown when AWS_PROFILE is set.

@@ -11,4 +11,5 @@
 
 {
   programs.opencode.enable = true;
+  custom.smoke.opencode = "opencode --version";
 }

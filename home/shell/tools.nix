@@ -14,4 +14,15 @@
     pkgs.ripgrep # grep replacement; also used by Neovim's live grep
     pkgs.yazi # terminal file manager; the y function
   ];
+
+  custom.smoke = {
+    curl = "curl --version";
+    eza = "eza --version";
+    fd = "fd --version";
+    jaq = "jaq --version";
+    jq = "jq --version";
+    lazygit = "lazygit --version";
+    rg = "rg --version";
+    yazi = "yazi --version";
+  };
 }

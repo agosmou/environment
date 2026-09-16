@@ -61,20 +61,28 @@
       # where it would break the shell or the editor.
       #
       # Each check runs in a sandbox with only the tools listed under
-      # nativeBuildInputs, so it gives the same answer on every machine and
-      # in CI. `touch $out` at the end just tells Nix the check produced its
-      # (empty) result.
+      # nativeBuildInputs on PATH. Those tools are NOT installed on the
+      # machine: they exist for the check and are gone after (cached in
+      # /nix/store, pointed at by nothing). That is why the checks give the
+      # same answer on a fresh clone, on CI, and here, and why `which zizmor`
+      # finds nothing. To run one of them by hand for a full report:
+      # `nix run nixpkgs#zizmor -- <file>`. `touch $out` at the end just
+      # tells Nix the check produced its (empty) result.
 
       # Why: a typo in a shell script would otherwise only show up when it
       # runs: for functions.sh that is the next terminal, for bootstrap that
       # is a fresh machine halfway through setup. shellcheck reads bash for
-      # common mistakes; `zsh -n` parses the zsh files without running them.
+      # common mistakes; `zsh -n` parses the zsh files without running them;
+      # zizmor checks the CI workflow for the mistakes that get repositories
+      # compromised (an action pinned to a movable tag, a token with more
+      # permissions than the job needs).
       scriptLint =
         testPkgs.runCommand "environment-script-lint"
           {
             nativeBuildInputs = [
               testPkgs.just
               testPkgs.shellcheck
+              testPkgs.zizmor
               testPkgs.zsh
             ];
           }
@@ -91,6 +99,9 @@
               ${./home/shell/functions.sh} \
               ${./home/shell/zsh-keybindings.zsh}
             just --justfile ${./justfile} --list >/dev/null
+            # zizmor audits the GitHub Actions workflow: unpinned actions,
+            # excessive token permissions, credential persistence.
+            zizmor --offline --no-progress ${./.github/workflows/check.yml}
             touch $out
           '';
 
@@ -102,6 +113,32 @@
         BOOTSTRAP=${./bootstrap} ${testPkgs.bash}/bin/bash ${./tests/bootstrap.sh}
         touch $out
       '';
+      # Why: building proves every package exists and links; it does not
+      # prove a binary runs on this CPU and OS. This takes a target's built
+      # generation and executes every command it installs with its version
+      # flag, from an empty environment, like a fresh login would. A broken
+      # dynamic library, a wrong-architecture binary, or a tool that crashes
+      # on start fails here instead of on the machine. Each module declares
+      # its own command (custom.smoke), so the list is whatever the target
+      # actually installs.
+      smokeTest =
+        name: home:
+        let
+          pkgs = home.pkgs;
+          # Every custom.smoke entry the target's modules registered, in name
+          # order. Nothing is listed here: see the option in home/common.nix.
+          commands = builtins.attrValues home.config.custom.smoke;
+        in
+        pkgs.runCommand "environment-smoke-${name}" { } ''
+          export HOME="$TMPDIR"
+          bin=${home.activationPackage}/home-path/bin
+          ${pkgs.lib.concatMapStringsSep "\n" (
+            c: ''"$bin"/${c} >/dev/null || { echo "FAILED: ${c}"; exit 1; }''
+          ) commands}
+          echo "ran ${toString (builtins.length commands)} commands"
+          touch $out
+        '';
+
       # Why: a Lua syntax error in the Neovim config would otherwise only
       # show up when Neovim starts. This parses every Lua file without
       # running it and fails on the first one that does not parse.
@@ -163,9 +200,16 @@
           bootstrap = bootstrapTests;
           workstation = workstationLinux.activationPackage;
           server = serverX86Linux.activationPackage;
+          smoke = smokeTest "workstation-x86_64-linux" workstationLinux;
         };
-        aarch64-linux.server = serverArmLinux.activationPackage;
-        aarch64-darwin.workstation = workstationDarwin.activationPackage;
+        aarch64-linux = {
+          server = serverArmLinux.activationPackage;
+          smoke = smokeTest "server-aarch64-linux" serverArmLinux;
+        };
+        aarch64-darwin = {
+          workstation = workstationDarwin.activationPackage;
+          smoke = smokeTest "workstation-aarch64-darwin" workstationDarwin;
+        };
       };
     };
 }

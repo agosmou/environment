@@ -33,4 +33,5 @@ let
 in
 {
   home.packages = [ keydStatic ];
+  custom.smoke.keyd = "keyd -v";
 }

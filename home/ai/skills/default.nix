@@ -10,8 +10,12 @@
 #   ~/.codex/skills/<name>             Codex
 #   ~/.config/opencode/skills/<name>   OpenCode
 #
+# Layout of this directory:
+#   default.nix   this file: the list, and where the vendored ones come from
+#   custom/       skills written here, one directory per skill
+#
 # Two kinds of skill:
-#   own       written here, under home/ai/skills/<name>/
+#   custom    written here, under custom/<name>/SKILL.md
 #   vendored  someone else's, fetched from GitHub at a pinned commit. The
 #             text never enters this repository; Nix fetches it and the hash
 #             guarantees it is the reviewed version. To update: change rev,
@@ -39,9 +43,9 @@ let
   };
 
   skills = {
-    # Own. PR descriptions with a TL;DR note, diagrams, a shaped diff, the
-    # alternatives, and reading order for the reviewer.
-    pr-description = ./skills/pr-description;
+    # Custom. PR descriptions with a TL;DR note, diagrams, a shaped diff,
+    # the alternatives, and reading order for the reviewer.
+    pr-description = ./custom/pr-description;
 
     # Explain the current topic visually: pseudocode, call trees, file
     # trees, Mermaid, diffs. Invoke with "show me".
