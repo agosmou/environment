@@ -1,0 +1,5 @@
+{ ... }:
+
+{
+  custom.tmux.laptopWidgets = true;
+}

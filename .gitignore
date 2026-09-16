@@ -1,0 +1,16 @@
+result
+result-*
+*.bak.*
+.direnv/
+local/
+.env
+.env.*
+!.env.example
+
+# Credential and runtime files must never become repository source.
+**/hosts.yml
+**/.netrc
+**/*credentials*
+**/*.key
+**/atuin/session
+**/atuin/key
