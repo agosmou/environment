@@ -1,0 +1,273 @@
+#!/usr/bin/env bash
+#
+# bootstrap: turn a fresh machine into this environment with one command.
+#
+#   On a machine with nothing on it:
+#     curl -fsSL https://raw.githubusercontent.com/agosmou/environment/main/bootstrap \
+#       | bash -s -- --target workstation
+#
+#     curl -f   fail on an HTTP error instead of piping the error page to bash
+#          -s   no progress bar
+#          -S   but still print errors (-s alone hides them)
+#          -L   follow redirects
+#     bash -s   read the script from stdin (the pipe) instead of a file
+#          --   what follows are arguments for the script, not for bash
+#
+#   From an existing clone, on a machine that is already set up:
+#     ./bootstrap --target workstation
+#
+#     Same script, same steps; on a set-up machine steps 2-4 find nothing to
+#     do, so this is effectively "apply the root-level layer again". Run it
+#     after changing anything under platform/ (a dnf package, the keyd
+#     config, the Brewfile). For changes under home/ you do not need it:
+#     that is what `switch` is for.
+#
+# What it does, in order:
+#   1. Work out which target this machine is (workstation or server, and
+#      which CPU/OS), or check the one you named.
+#   2. Install Nix if it is missing.
+#   3. Clone this repository into ~/environment if it is not there.
+#   4. Build and activate the Home Manager configuration for the target.
+#   5. Run the platform script for the OS (platform/fedora, platform/darwin),
+#      which does the few things that need root: system packages, services.
+#
+# Steps 2 and 5 ask for sudo. Nothing else does.
+
+# Bash strict mode:
+#   -e  stop at the first command that fails
+#   -u  using an unset variable is an error, not an empty string
+#   -o pipefail  a pipeline fails if any command in it fails, not just the last
+set -euo pipefail
+
+# ---- Arguments --------------------------------------------------------------
+
+# Where to clone from and to. Both can be overridden by environment variable,
+# which the tests use so they never touch the real repository.
+repo_url="${ENVIRONMENT_REPO_URL:-https://github.com/agosmou/environment.git}"
+repo_dir="${ENVIRONMENT_REPO_DIR:-$HOME/environment}"
+target=""
+dry_run=false
+
+usage() {
+  cat <<'USAGE'
+Usage: bootstrap --target <workstation|server|full-target> [options]
+
+Options:
+  --target <name>     Role (workstation, server) or full target name
+                      (workstation-x86_64-linux, server-aarch64-linux, ...)
+  --repo-dir <path>   Clone into or use this directory (default: ~/environment)
+  --repo-url <url>    Git repository URL
+  --dry-run           Resolve and validate the target without changing anything
+  -h, --help          Show this help
+
+Examples:
+  bootstrap --target workstation
+  bootstrap --target server
+  bootstrap --target server-aarch64-linux
+USAGE
+}
+
+fail() {
+  printf 'bootstrap: %s\n' "$*" >&2
+  exit 1
+}
+
+# Walk the argument list. `shift 2` consumes an option and its value; `shift`
+# consumes a flag with no value. `(($#))` is true while arguments remain.
+while (($#)); do
+  case "$1" in
+    --target)
+      (($# >= 2)) || fail '--target requires a value'
+      target="$2"
+      shift 2
+      ;;
+    --repo-dir)
+      (($# >= 2)) || fail '--repo-dir requires a value'
+      repo_dir="$2"
+      shift 2
+      ;;
+    --repo-url)
+      (($# >= 2)) || fail '--repo-url requires a value'
+      repo_url="$2"
+      shift 2
+      ;;
+    --dry-run)
+      dry_run=true
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    -*)
+      fail "unknown option: $1"
+      ;;
+    *)
+      # A bare word is accepted as the target, so `bootstrap workstation` works.
+      [[ -z "$target" ]] || fail "unexpected argument: $1"
+      target="$1"
+      shift
+      ;;
+  esac
+done
+
+[[ -n "$target" ]] || fail 'a target is required'
+
+# ---- Which machine is this? -------------------------------------------------
+
+# `uname -m` is the CPU (x86_64, arm64, aarch64); `uname -s` is the kernel
+# (Linux, Darwin). The ENVIRONMENT_BOOTSTRAP_UNAME_* overrides exist only so
+# tests/bootstrap.sh can pretend to be other machines.
+machine="${ENVIRONMENT_BOOTSTRAP_UNAME_M:-$(uname -m)}"
+os="${ENVIRONMENT_BOOTSTRAP_UNAME_S:-$(uname -s)}"
+
+# Normalise to the names Nix uses.
+case "$machine" in
+  x86_64|amd64) architecture="x86_64" ;;
+  arm64|aarch64) architecture="aarch64" ;;
+  *) fail "unsupported architecture: $machine" ;;
+esac
+
+case "$os" in
+  Linux) kernel="linux" ;;
+  Darwin) kernel="darwin" ;;
+  *) fail "unsupported operating system: $os" ;;
+esac
+
+# Nix calls this the "system", e.g. x86_64-linux or aarch64-darwin.
+system="${architecture}-${kernel}"
+
+# A bare role becomes a full target name by appending the system.
+case "$target" in
+  workstation|server)
+    target="${target}-${system}"
+    ;;
+esac
+
+# Only targets that exist in flake.nix, and only on the machine they are for.
+case "$target" in
+  workstation-x86_64-linux|workstation-aarch64-darwin|server-x86_64-linux|server-aarch64-linux)
+    ;;
+  *) fail "unsupported target '$target' on detected system '$system'" ;;
+esac
+
+[[ "$target" == *"-${system}" ]] ||
+  fail "target '$target' does not match detected system '$system'"
+
+if [[ "$dry_run" == true ]]; then
+  printf 'system=%s\ntarget=%s\n' "$system" "$target"
+  exit 0
+fi
+
+# ---- Nix --------------------------------------------------------------------
+
+# Make the `nix` command available in this shell. A fresh login shell gets it
+# from the profile.d scripts automatically; this script may be running in the
+# same shell that just installed Nix, so source them by hand.
+load_nix() {
+  if command -v nix >/dev/null 2>&1; then
+    return 0
+  fi
+
+  for profile in \
+    /etc/profile.d/nix-daemon.sh \
+    /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh \
+    "$HOME/.nix-profile/etc/profile.d/nix.sh"
+  do
+    if [[ -r "$profile" ]]; then
+      # shellcheck disable=SC1090
+      source "$profile"
+    fi
+  done
+
+  command -v nix >/dev/null 2>&1
+}
+
+# Which Linux distribution this is, e.g. "fedora". Empty on macOS. Read in a
+# subshell so /etc/os-release's variables do not leak into this script.
+distro=""
+if [[ "$kernel" == linux && -r /etc/os-release ]]; then
+  # shellcheck disable=SC1091
+  distro="$(source /etc/os-release && printf '%s' "${ID:-}")"
+fi
+
+# Install Nix if it is absent. Two paths, both official:
+#   Fedora     Fedora's own package. It is listed in platform/fedora/packages
+#              as well, so doctor and inventory account for it. It ships
+#              /etc/nix/nix.conf with flakes enabled and a socket-activated
+#              daemon, so nothing else needs configuring.
+#   Otherwise  the upstream installer from nixos.org in multi-user (daemon)
+#              mode. --yes answers its prompts.
+if ! load_nix; then
+  case "$distro" in
+    fedora)
+      printf 'Installing Nix from the Fedora package...\n'
+      sudo dnf install -y nix nix-daemon
+      sudo systemctl enable --now nix-daemon.socket
+      ;;
+    *)
+      command -v curl >/dev/null 2>&1 || fail 'curl is required to install Nix'
+      installer="$(mktemp)"
+      trap 'rm -f "${installer:-}"' EXIT
+      printf 'Installing Nix with the upstream nixos.org installer...\n'
+      curl --proto '=https' --tlsv1.2 -fsSL https://nixos.org/nix/install \
+        -o "$installer"
+      sh "$installer" --daemon --yes
+      ;;
+  esac
+  load_nix || fail 'Nix installed but is not available in this shell'
+fi
+
+# Flakes are still behind a feature flag in Nix; pass it explicitly so this
+# works even where nix.conf does not enable it.
+nix_cmd=(nix --extra-experimental-features 'nix-command flakes')
+
+# ---- Repository -------------------------------------------------------------
+
+if [[ -e "$repo_dir" ]]; then
+  [[ -f "$repo_dir/flake.nix" ]] ||
+    fail "$repo_dir exists but does not contain flake.nix"
+else
+  mkdir -p "$(dirname "$repo_dir")"
+  printf 'Cloning %s into %s...\n' "$repo_url" "$repo_dir"
+  # A bare machine may not have git; borrow one from nixpkgs for the clone.
+  if command -v git >/dev/null 2>&1; then
+    git clone "$repo_url" "$repo_dir"
+  else
+    "${nix_cmd[@]}" shell nixpkgs#git -c git clone "$repo_url" "$repo_dir"
+  fi
+fi
+
+# ---- Activate ---------------------------------------------------------------
+
+# `path:` makes Nix read the directory as-is, including files not yet
+# committed, so a local edit can be activated before it is committed.
+flake_ref="path:$repo_dir"
+printf 'Activating ag@%s...\n' "$target"
+# home-manager comes from this flake's own inputs, so its version is pinned
+# in flake.lock like everything else. `-b pre-home-manager` tells it to
+# rename any existing dotfile it wants to replace to <file>.pre-home-manager
+# instead of refusing, which is what happens on a machine with a stock
+# ~/.bashrc.
+"${nix_cmd[@]}" run "$flake_ref#home-manager" -- \
+  -b pre-home-manager switch --flake "$flake_ref#ag@$target"
+
+# ---- Platform (needs root) --------------------------------------------------
+
+case "$kernel" in
+  linux)
+    case "$distro" in
+      fedora)
+        "$repo_dir/platform/fedora/bootstrap.sh" "$repo_dir" "$target"
+        ;;
+      *)
+        printf 'No privileged platform steps for Linux distribution %s.\n' "${distro:-unknown}"
+        ;;
+    esac
+    ;;
+  darwin)
+    "$repo_dir/platform/darwin/bootstrap.sh" "$repo_dir" "$target"
+    ;;
+esac
+
+printf 'Environment bootstrap complete: ag@%s\n' "$target"

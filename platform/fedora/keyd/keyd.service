@@ -1,0 +1,18 @@
+# systemd unit for keyd. Installed to /etc/systemd/system/keyd.service by
+# platform/fedora/bootstrap.sh. Runs the copy of the keyd binary that the
+# bootstrap places in /usr/local/bin, not the one in /nix/store, because
+# SELinux will not let a system service execute from the Nix store.
+
+[Unit]
+Description=keyd key remapping daemon
+# Start once local filesystems are mounted, so /usr/local/bin exists.
+After=local-fs.target
+
+[Service]
+ExecStart=/usr/local/bin/keyd-nix
+# Restart if it crashes, but not if it was stopped on purpose.
+Restart=on-failure
+
+[Install]
+# Start at boot, in the normal multi-user system state.
+WantedBy=multi-user.target

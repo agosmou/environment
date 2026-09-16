@@ -4,6 +4,7 @@
   imports = [
     ../../home/common.nix
     ../../home/desktop/gnome.nix
+    ../../home/desktop/keyd.nix
     ../../home/desktop/rustdesk.nix
     ../../home/desktop/wl-clipboard.nix
     ../../home/git/gh.nix
@@ -14,6 +15,7 @@
     ../../home/shell/bash.nix
     ../../home/shell/bat.nix
     ../../home/shell/btop.nix
+    ../../home/shell/fastfetch.nix
     ../../home/shell/fzf.nix
     ../../home/shell/starship.nix
     ../../home/shell/tools.nix
@@ -23,6 +25,9 @@
     ../../home/tmux
     ../../home/tmux/workstation.nix
   ];
+
+  # Print the machine summary when a terminal window opens (not per tmux pane).
+  custom.fastfetch.greeting = true;
 
   home.username = "ag";
   home.homeDirectory = "/home/ag";

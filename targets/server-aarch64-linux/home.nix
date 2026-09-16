@@ -10,6 +10,7 @@
     ../../home/shell/bash.nix
     ../../home/shell/bat.nix
     ../../home/shell/btop.nix
+    ../../home/shell/fastfetch.nix
     ../../home/shell/fzf.nix
     ../../home/shell/starship.nix
     ../../home/shell/tools.nix

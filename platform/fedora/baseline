@@ -1,0 +1,30 @@
+# Packages that dnf marks as "user installed" but that this repository does
+# not manage. scripts/doctor ignores these when looking for drift.
+#
+# Most of these were marked by the Fedora Workstation live installer, not by a
+# person. Find yours with:
+#   dnf repoquery --installed --qf '%{name} %{reason}\n' | awk '$2=="User"'
+#
+# Same format as platform/fedora/packages: one name per line, # comments.
+
+# Fedora Workstation live installer
+aajohan-comfortaa-fonts
+anaconda-install-env-deps
+anaconda-live
+dnf5
+dracut-live
+fedora-release-workstation
+filesystem
+grub2-efi-ia32-modules
+grub2-efi-x64-modules
+grubby
+isomd5sum
+kernel
+kernel-core
+kernel-modules
+kernel-modules-core
+kernel-modules-extra
+livesys-scripts
+mediawriter
+systemd-oomd-defaults
+udisks2-btrfs

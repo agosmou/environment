@@ -27,6 +27,34 @@ broken environment.
 
 The daily loop is therefore: **edit, check, switch.**
 
+## Bootstrap
+
+On a machine with nothing on it:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/agosmou/environment/main/bootstrap \
+  | bash -s -- --target workstation
+```
+
+Use `--target server` for a server. The script detects the CPU and OS,
+installs Nix (Fedora's own package on Fedora, the upstream nixos.org installer
+elsewhere), clones this repository into `~/environment`, activates the
+matching target, and runs the platform step for the OS. Re-running it from
+the clone is safe:
+
+```bash
+./bootstrap --target workstation
+```
+
+The platform step is the only part that needs root, and it is small:
+
+| OS | Declared in | Applied by |
+|---|---|---|
+| Fedora | `platform/fedora/packages` (dnf), `platform/fedora/keyd/` | `platform/fedora/bootstrap.sh` |
+| macOS | `platform/darwin/Brewfile` | `platform/darwin/bootstrap.sh` |
+
+Everything else on a machine comes from Home Manager and needs no root.
+
 ## Layout
 
 | Directory | Contents |
@@ -36,6 +64,7 @@ The daily loop is therefore: **edit, check, switch.**
 | `home/neovim/`, `home/tmux/`, `home/terminal/` | editor, multiplexer, Ghostty |
 | `home/desktop/` | things that need a screen: GNOME settings, clipboard, remote desktop; workstation targets only |
 | `targets/` | one file per machine type, listing exactly which of the above it imports |
+| `platform/` | the root-level layer per OS: dnf and Homebrew manifests, keyd, the scripts that apply them |
 
 ## Targets
 

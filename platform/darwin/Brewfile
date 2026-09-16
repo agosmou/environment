@@ -1,0 +1,15 @@
+# Native macOS applications installed by Homebrew. The macOS equivalent of
+# platform/fedora/packages: only things that cannot or should not come from
+# Home Manager. Applied by platform/darwin/bootstrap.sh; checked by
+# scripts/doctor, which also reports anything brew has that is not listed
+# here.
+#
+# To add: add a line, run `just bootstrap <target>`.
+# To remove: delete the line, then `brew uninstall --cask <name>` yourself.
+
+# Terminal. nixpkgs has no Ghostty build for macOS; the cask is the signed
+# .app from upstream. Its config still comes from home/terminal/ghostty.nix.
+cask "ghostty"
+
+# Remote desktop. nixpkgs marks RustDesk unsupported on Apple Silicon.
+cask "rustdesk"

@@ -1,0 +1,23 @@
+# Fedora packages that need root or a system service.
+#
+# This is the dnf equivalent of platform/darwin/Brewfile. Everything else
+# belongs in Home Manager (home/), which needs no root.
+#
+# How it is used:
+#   platform/fedora/bootstrap.sh  runs `sudo dnf install` on every name here
+#   scripts/doctor                fails if a name here is not installed, and
+#                                 fails if dnf shows a hand-installed package
+#                                 that is not listed here (drift)
+#   scripts/inventory             prints this list
+#
+# Rules:
+#   - one package name per line; blank lines and # comments are ignored
+#   - to add a package: add it here, run `just bootstrap <target>`
+#   - to remove one: delete it here, then `sudo dnf remove <name>` yourself
+#   - never `sudo dnf install` by hand; doctor will report it as drift
+
+# Nix itself: Fedora's own package, not a third-party installer. ./bootstrap
+# installs these two before this file can be read; they are listed here so
+# doctor and inventory tell the truth about what is on the machine.
+nix
+nix-daemon
