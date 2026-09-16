@@ -97,6 +97,16 @@ Everything else on a machine comes from Home Manager and needs no root.
 | `targets/` | one file per machine type, listing exactly which of the above it imports |
 | `platform/` | the root-level layer per OS: dnf and Homebrew manifests, keyd, the scripts that apply them |
 
+## Adding A Target
+
+A target is `<role>-<nix-system>`: `workstation` or `server`, and one of
+`x86_64-linux`, `aarch64-linux`, `aarch64-darwin`. To add one: create
+`targets/<name>/home.nix` listing its imports and `custom.target`, register
+it in `flake.nix` (`mkHome`, `homeConfigurations`, and a `checks` entry under
+its system), and add it to the accepted list in `bootstrap`. Do not encode a
+provider or distribution in the name: the same server configuration works
+anywhere that CPU and OS run.
+
 ## Targets
 
 | Target | Intended use |
@@ -207,3 +217,6 @@ Homebrew do not, so doctor lists the leftovers until you remove them.
   rollback work, and where the config files under `~/.config` come from.
 - [docs/remote-access.md](docs/remote-access.md): SSH and RustDesk between
   the machines, including the one-time macOS permission setup.
+- [docs/neovim.md](docs/neovim.md): how the editor config is laid out, how to
+  add a plugin or language server, and the keys added on top of Kickstart.
+- [docs/tmux.md](docs/tmux.md): keys and behaviour.
