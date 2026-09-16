@@ -3,6 +3,9 @@
 {
   imports = [
     ../../home/common.nix
+    ../../home/ai/claude-code.nix
+    ../../home/ai/codex.nix
+    ../../home/ai/opencode.nix
     ../../home/git/gh.nix
     ../../home/git/git.nix
     ../../home/neovim

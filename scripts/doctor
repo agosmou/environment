@@ -152,7 +152,7 @@ fi
 # Every command the modules under home/ put on PATH. If one is missing, a
 # module was removed from the target, the apply failed, or PATH is wrong.
 for command in \
-  curl git git-lfs gh just nvim starship tmux \
+  claude codex curl git git-lfs gh just nvim opencode starship tmux \
   atuin bat btop delta eza fastfetch fd fzf jaq jq lazygit rg sesh yazi zoxide
 do
   check_command "$command"
