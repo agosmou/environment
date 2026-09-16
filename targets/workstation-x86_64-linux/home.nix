@@ -3,6 +3,8 @@
 {
   imports = [
     ../../home/common.nix
+    ../../home/git/gh.nix
+    ../../home/git/git.nix
     ../../home/neovim
     ../../home/neovim/workstation.nix
     ../../home/shell/atuin.nix
@@ -13,6 +15,7 @@
     ../../home/shell/starship.nix
     ../../home/shell/tools.nix
     ../../home/shell/zoxide.nix
+    ../../home/ssh/ssh.nix
     ../../home/terminal/ghostty.nix
     ../../home/tmux
     ../../home/tmux/workstation.nix
