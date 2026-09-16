@@ -27,6 +27,16 @@ broken environment.
 
 The daily loop is therefore: **edit, check, switch.**
 
+## Layout
+
+| Directory | Contents |
+|---|---|
+| `home/shell/` | bash, zsh, and one file per command-line tool |
+| `home/git/`, `home/ssh/` | git, gh, ssh |
+| `home/neovim/`, `home/tmux/`, `home/terminal/` | editor, multiplexer, Ghostty |
+| `home/desktop/` | things that need a screen: GNOME settings, clipboard, remote desktop; workstation targets only |
+| `targets/` | one file per machine type, listing exactly which of the above it imports |
+
 ## Targets
 
 | Target | Intended use |

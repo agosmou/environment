@@ -3,6 +3,9 @@
 {
   imports = [
     ../../home/common.nix
+    ../../home/desktop/gnome.nix
+    ../../home/desktop/rustdesk.nix
+    ../../home/desktop/wl-clipboard.nix
     ../../home/git/gh.nix
     ../../home/git/git.nix
     ../../home/neovim
