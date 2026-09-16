@@ -1,7 +1,33 @@
 # environment
 
-Pinned Home Manager environments for Linux servers, a Fedora workstation, and
-an Apple Silicon macOS workstation.
+One repository that produces the same working environment on every machine:
+Neovim, tmux, the shell, the terminal, and the tools around them. Linux and
+macOS.
+
+## Why It Is Shaped This Way
+
+The goal is to open any computer and get to work, and never lose a day to a
+broken environment.
+
+1. So the environment has to be **reproducible**. Nix and Home Manager do
+   that: this repository *is* the environment. Activating it builds every
+   package and config file from these files, and the same files give the same
+   result on any machine.
+2. Reproducible cuts both ways. A mistake here is reproduced everywhere: a
+   typo in a shell function breaks every new terminal on every machine that
+   activates it. So the repository needs a way to be **known good** before it
+   is applied.
+3. That is `nix flake check`. One command that builds the environment for
+   every target and runs the small checks in `flake.nix` (shell script lint,
+   Neovim Lua parse). Those checks catch what Nix alone cannot see: Nix will
+   happily install a script with a syntax error, because to Nix it is just a
+   file.
+4. Later, CI runs the same command on a clean clone, so "works on my machine
+   but I forgot to commit a file" is caught too.
+
+The daily loop is therefore: **edit, check, switch.**
+
+## Targets
 
 | Target | Intended use |
 |---|---|
@@ -10,105 +36,18 @@ an Apple Silicon macOS workstation.
 | `server-x86_64-linux` | x86 Linux server |
 | `server-aarch64-linux` | ARM Linux server |
 
-Activate a target:
+## Commands
 
 ```bash
-nix run home-manager -- switch --flake .#ag@workstation-x86_64-linux
-```
-
-Check every target evaluates and the native ones build:
-
-```bash
+# Check: every target evaluates, the native ones build, the lints pass
 nix flake check --all-systems --no-build
 nix flake check
-```
 
-## Nix In Five Minutes
-
-Everything Nix installs lives in one place, `/nix/store`. Nothing is written
-to `/usr/bin`, `/usr/lib`, or `~/.local/bin`. Each package is one immutable
-directory named by a hash of everything that went into building it:
-
-```text
-/nix/store/3micl37dibw3kjiv5k101yw92w6h7amh-neovim-0.12.5/bin/nvim
-           └──────────── hash ─────────────┘ └── name ───┘
-```
-
-What makes those packages usable is a chain of symlinks from the home
-directory into the store. Following `nvim` from the shell to the binary:
-
-```text
-$ which nvim
-~/.nix-profile/bin/nvim
-    │
-    │  ~/.nix-profile  ->  ~/.local/state/nix/profiles/profile
-    │  ~/.local/state/nix/profiles/home-manager  ->  home-manager-N-link
-    │                                                 (generation N, current)
-    ▼
-/nix/store/...-home-manager-generation/
-    ├── home-path/bin/    every command this environment provides, each a
-    │                     symlink to its package
-    ├── home-files/       the targets of the ~/.config symlinks
-    └── activate          the script that a switch runs
-    │
-    ▼
-/nix/store/...-neovim-0.12.5/bin/nvim
-```
-
-Three layers, each answering a different question:
-
-| Layer | Path | What it is |
-|---|---|---|
-| Store | `/nix/store/<hash>-<name>/` | Every package ever built or downloaded, including old versions and build-only dependencies. Only grows until garbage collected. |
-| Generation | `~/.local/state/nix/profiles/home-manager-N-link` | One snapshot of this environment: symlinks to exactly the packages and files the modules declared at that switch. Old generations stay, which is what makes rollback instant. |
-| PATH | `~/.nix-profile/bin` | The one directory the shell searches. Points at the current generation. |
-
-A switch builds a new generation and repoints the symlinks. It never edits a
-file in place, so a failed build leaves the current generation untouched.
-
-```bash
-# Build and activate a new generation from this repository
+# Switch: build and activate a target on this machine
 nix run home-manager -- switch --flake .#ag@workstation-x86_64-linux
-
-# Every generation, newest last; roll back by activating an older one
-nix run home-manager -- generations
-
-# What is on PATH right now
-ls ~/.nix-profile/bin
-
-# Everything the current generation depends on, transitively
-nix path-info -r ~/.local/state/nix/profiles/home-manager | wc -l
-
-# The same list with sizes, largest last
-nix path-info -rSh ~/.local/state/nix/profiles/home-manager | sort -k2 -h | tail
-
-# What garbage collection would delete (nothing is deleted by this)
-nix-store --gc --print-dead | wc -l
-
-# Delete old generations and every store path nothing references
-nix-collect-garbage -d
 ```
 
-Nix does not touch mutable state: Neovim's plugin data in
-`~/.local/share/nvim`, tmux session snapshots, shell history. Those are runtime
-files, not configuration, and they are not in this repository.
+## Read Next
 
-## Where Config Files Come From
-
-Home Manager writes the files under `~/.config` as symlinks into the Nix
-store; the files on disk are build output, not source. To change one, edit
-its module under `home/` and re-run the switch. Editing the symlink target
-fails because the store is read-only.
-
-Two styles are in use, and both are legitimate:
-
-- **Generated from Nix attributes.** Ghostty, tmux, and starship are declared
-  as `settings = { ... }` blocks and rendered to their native formats. No
-  config file exists in this repository for them.
-- **Real files.** Neovim's Lua lives as source in `home/neovim/config/` and is
-  linked in unchanged. That is not a Nix-generated config.
-
-If a generated config would be easier to tweak as plain text, switch it to a
-real file. For Ghostty that is `xdg.configFile."ghostty/config".source =
-./config;` in `home/terminal/ghostty.nix` with the file beside it. Nix
-attributes are simply what this repository chose for the small configs.
+- [docs/nix.md](docs/nix.md): where Nix puts things, how generations and
+  rollback work, and where the config files under `~/.config` come from.
