@@ -91,7 +91,7 @@ Everything else on a machine comes from Home Manager and needs no root.
 | `home/git/`, `home/ssh/` | git, gh, ssh |
 | `home/neovim/`, `home/tmux/`, `home/terminal/` | editor, multiplexer, Ghostty |
 | `home/desktop/` | things that need a screen: GNOME settings, clipboard, remote desktop; workstation targets only |
-| `home/ai/` | the coding agents: OpenCode, Claude Code, Codex; packages only, their state stays on the machine |
+| `home/ai/` | the coding agents: OpenCode, Claude Code, Codex, and the skills all three share (`skills.nix`) |
 | `targets/` | one file per machine type, listing exactly which of the above it imports |
 | `platform/` | the root-level layer per OS: dnf and Homebrew manifests, keyd, the scripts that apply them |
 

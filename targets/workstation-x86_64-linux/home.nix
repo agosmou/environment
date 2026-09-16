@@ -6,6 +6,7 @@
     ../../home/ai/claude-code.nix
     ../../home/ai/codex.nix
     ../../home/ai/opencode.nix
+    ../../home/ai/skills.nix
     ../../home/desktop/gnome.nix
     ../../home/desktop/keyd.nix
     ../../home/desktop/rustdesk.nix
