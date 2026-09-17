@@ -76,6 +76,26 @@ deliberately not in the repository, so it can be public.
    apps (Ghostty, RustDesk) are missing from the app grid and Super-search,
    even though they run from a terminal. Once, after the first bootstrap.
 
+### A machine that already has an environment
+
+Home Manager takes over the files it manages and leaves everything else
+alone. There is no merge and no silent overwrite:
+
+- **A file it manages already exists** (`~/.bashrc`, `~/.config/nvim`, a
+  Stow symlink): the original is renamed to `<file>.pre-home-manager` and the
+  managed file takes its place. Nothing from the old file is carried over.
+  `just doctor` lists every such backup and stays red until you have moved
+  what matters into the repository and deleted the backup.
+- **Programs installed some other way** (`brew`, `dnf`, `apt`, `pip`, things
+  in `~/.local/bin`) stay installed. `~/.nix-profile/bin` comes first on PATH,
+  so the Nix version of a tool wins when both exist. On Fedora and macOS,
+  `just doctor` reports packages outside the manifests as drift; removing them
+  is always your call.
+- **Config for tools this repository does not manage** is untouched.
+
+So the sequence on an existing machine is: bootstrap, `just doctor`, work
+through what it lists, done.
+
 The platform step is the only part that needs root, and it is small:
 
 | OS | Declared in | Applied by |
@@ -214,7 +234,8 @@ Homebrew do not, so doctor lists the leftovers until you remove them.
 ## Read Next
 
 - [docs/nix.md](docs/nix.md): where Nix puts things, how generations and
-  rollback work, and where the config files under `~/.config` come from.
+  rollback work, what a flake is and why the "experimental" features are on,
+  and where the config files under `~/.config` come from.
 - [docs/remote-access.md](docs/remote-access.md): SSH and RustDesk between
   the machines, including the one-time macOS permission setup.
 - [docs/neovim.md](docs/neovim.md): how the editor config is laid out, how to

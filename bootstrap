@@ -218,9 +218,26 @@ if ! load_nix; then
   load_nix || fail 'Nix installed but is not available in this shell'
 fi
 
-# Flakes are still behind a feature flag in Nix; pass it explicitly so this
-# works even where nix.conf does not enable it.
-nix_cmd=(nix --extra-experimental-features 'nix-command flakes')
+# ---- Turn on flakes, system-wide ---------------------------------------------
+#
+# Every nix command below needs the "flakes" and "nix-command" features,
+# which Nix keeps off by default (docs/nix.md, "Flakes and nix.conf", has
+# the background). Fedora's Nix package turns them on for the whole machine
+# in /etc/nix/nix.conf; the upstream installer used on macOS and Ubuntu
+# leaves them off. Do here what Fedora's package does, so every machine
+# ends up the same: one line in /etc/nix/nix.conf, read by every nix
+# process for every user, root included. Appending is skipped when the
+# line is already there, so this is a no-op on Fedora and on re-runs.
+#
+# This has to be a file, not a flag on the command below: home-manager
+# starts its own nix processes during activation, and a command-line flag
+# reaches only the process it is typed on. That is how the first server
+# bootstrap failed.
+#
+# Reference: https://nix.dev/manual/nix/latest/command-ref/conf-file#conf-experimental-features
+if ! grep -qs 'experimental-features.*flakes' /etc/nix/nix.conf; then
+  printf 'experimental-features = nix-command flakes\n' | sudo tee -a /etc/nix/nix.conf >/dev/null
+fi
 
 # ---- Repository -------------------------------------------------------------
 
@@ -234,7 +251,7 @@ else
   if command -v git >/dev/null 2>&1; then
     git clone "$repo_url" "$repo_dir"
   else
-    "${nix_cmd[@]}" shell nixpkgs#git -c git clone "$repo_url" "$repo_dir"
+    nix shell nixpkgs#git -c git clone "$repo_url" "$repo_dir"
   fi
 fi
 
@@ -249,7 +266,7 @@ printf 'Activating ag@%s...\n' "$target"
 # rename any existing dotfile it wants to replace to <file>.pre-home-manager
 # instead of refusing, which is what happens on a machine with a stock
 # ~/.bashrc.
-"${nix_cmd[@]}" run "$flake_ref#home-manager" -- \
+nix run "$flake_ref#home-manager" -- \
   -b pre-home-manager switch --flake "$flake_ref#ag@$target"
 
 # ---- Platform (needs root) --------------------------------------------------
@@ -271,3 +288,14 @@ case "$kernel" in
 esac
 
 printf 'Environment bootstrap complete: ag@%s\n' "$target"
+# The last step is the user's, not the script's: a script runs in its own
+# child process and can never change the PATH of the shell that started it
+# (the one you are typing in). The new ~/.bashrc is in place; it takes
+# effect in the next shell. Running `exec bash -l` from INSIDE this script,
+# to automate that, would replace the script's process with a fresh login
+# shell, which the user would be sitting in without knowing (a hidden nested
+# shell), and which would hang waiting for input when the bootstrap runs
+# non-interactively (CI, `ssh host bootstrap`). So print the instruction.
+# `exec $SHELL -l` works the same and is shell-agnostic (zsh on macOS).
+# shellcheck disable=SC2016  # the literal $SHELL is meant for the user to type
+printf 'Open a new shell (or: exec $SHELL -l) so PATH picks up ~/.nix-profile/bin.\n'

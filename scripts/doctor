@@ -20,6 +20,8 @@
 #   - Fedora: every package in platform/fedora/packages is installed, and
 #     nothing was hand-installed with dnf outside that list (drift)
 #   - macOS: the Brewfile is fully installed and brew has nothing extra (drift)
+#   - files Home Manager pushed aside on a machine that already had an
+#     environment (*.pre-home-manager) that have not been reconciled yet
 #
 # Drift is reported, never fixed: add the package to the manifest or remove
 # it yourself.
@@ -165,6 +167,15 @@ for command in "${commands[@]}"; do
   check_command "$command"
 done
 
+# Flakes and the `nix <verb>` CLI must be on for every just recipe to work.
+# bootstrap writes this to /etc/nix/nix.conf (Fedora's package ships it);
+# `nix config show` prints the merged, effective settings.
+if nix config show 2>/dev/null | grep -E '^experimental-features' | grep -q 'flakes'; then
+  pass "flakes are enabled in the effective nix config"
+else
+  fail "flakes are not enabled (bootstrap writes experimental-features to /etc/nix/nix.conf)"
+fi
+
 profile="$HOME/.local/state/nix/profiles/home-manager"
 if [[ -e "$profile" || -L "$profile" ]]; then
   pass "Home Manager profile exists"
@@ -261,6 +272,28 @@ case "$target" in
     ;;
 esac
 
+# Backups from taking over a machine that already had an environment.
+#
+# When Home Manager wants to place a file where one already exists (a
+# hand-written ~/.bashrc, a Stow symlink), it does not merge and does not
+# silently overwrite: bootstrap passes `-b pre-home-manager`, so the
+# original is renamed to <file>.pre-home-manager and the managed file takes
+# its place. Nothing is lost, but nothing from the old file is carried over
+# either. This check stays red until each backup has been looked at:
+# move anything worth keeping into the repository, then delete the backup.
+mapfile -t backups < <(find "$HOME" -maxdepth 3 -name '*.pre-home-manager' -not -path "$HOME/.cache/*" 2>/dev/null | sort)
+if ((${#backups[@]} == 0)); then
+  pass "no pre-home-manager backups waiting to be reconciled"
+else
+  fail "${#backups[@]} file(s) Home Manager pushed aside are not reconciled yet:"
+  for backup in "${backups[@]}"; do
+    managed="${backup%.pre-home-manager}"
+    printf '       %s\n' "$backup" >&2
+    printf '         compare: diff %s %s\n' "$backup" "$managed" >&2
+  done
+  printf '       Move what matters into the repository, then: rm <backup>\n' >&2
+fi
+
 # Home Manager manages these as symlinks into the Nix store. A regular file
 # here means something overwrote the symlink; a dangling one means the
 # generation it pointed at was garbage-collected.
@@ -280,10 +313,12 @@ fi
 
 # Two Neovim checks in one headless run: every Lua file under the config
 # parses, and every external tool the config expects (language servers,
-# formatters, ripgrep, a C compiler for tree-sitter) is on Neovim's PATH.
+# formatters, debuggers, a C compiler for tree-sitter) is on Neovim's PATH.
+# The editor is the same on every target, servers included: they are dev
+# boxes too.
 if nvim --clean --headless -u NONE -i NONE \
   '+lua local root=vim.fn.stdpath("config"); local files=vim.fn.glob(root.."/**/*.lua",false,true); if #files==0 then vim.api.nvim_err_writeln("no Lua files found"); vim.cmd.cquit() end; for _,f in ipairs(files) do local chunk,err=loadfile(f); if not chunk then vim.api.nvim_err_writeln(f..": "..tostring(err)); vim.cmd.cquit() end end' \
-  '+lua for _,x in ipairs({"git","curl","tar","gzip","unzip","rg","fd","lazygit","tree-sitter","cc","pyright-langserver","lua-language-server","stylua","ruff","black","markdownlint-cli2"}) do if vim.fn.executable(x)~=1 then vim.api.nvim_err_writeln("missing executable: "..x); vim.cmd.cquit() end end' \
+  '+lua for _,x in ipairs({"git","curl","tar","gzip","unzip","rg","fd","lazygit","tree-sitter","cc","pyright-langserver","lua-language-server","stylua","ruff","black","markdownlint-cli2","rust-analyzer","dlv","shellcheck","shfmt"}) do if vim.fn.executable(x)~=1 then vim.api.nvim_err_writeln("missing executable: "..x); vim.cmd.cquit() end end' \
   +qa >/dev/null 2>&1
 then
   pass "Neovim Lua and dependencies are valid"

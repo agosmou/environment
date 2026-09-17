@@ -27,4 +27,9 @@
   home.username = "ag";
   home.homeDirectory = "/home/ag";
   targets.genericLinux.enable = true;
+  # genericLinux pulls a Mesa-based GPU integration (over 1 GiB) by default
+  # so Nix-built GUI apps can render. A server has no display. Everything
+  # else, the editor and its full toolchain included, is the same as on a
+  # workstation: a server is a dev box too.
+  targets.genericLinux.gpu.enable = false;
 }

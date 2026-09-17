@@ -26,7 +26,17 @@
       cursor-style = "block";
       cursor-style-blink = false;
       shell-integration = if pkgs.stdenv.hostPlatform.isDarwin then "zsh" else "bash";
-      shell-integration-features = "no-cursor";
+      # Ghostty announces itself as TERM=xterm-ghostty, which remote hosts do
+      # not know; without the ssh-* features, tmux over ssh fails with
+      # "missing or unsuitable terminal".
+      # Values (prefix "no-" to turn one off):
+      #   cursor        shell integration changes the cursor shape; off, tmux and Neovim manage it
+      #   ssh-env       ssh sends a TERM the remote understands (xterm-256color) plus COLORTERM
+      #   ssh-terminfo  ssh first copies Ghostty's terminfo to the remote so xterm-ghostty works there
+      #   sudo          keep shell integration under sudo
+      #   title         set the window title from the shell
+      #   path          add Ghostty's bin dir to PATH
+      shell-integration-features = "no-cursor,ssh-env,ssh-terminfo";
     }
     // lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
       macos-option-as-alt = "left";

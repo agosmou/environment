@@ -69,6 +69,40 @@ Nix does not touch mutable state: Neovim's plugin data in
 `~/.local/share/nvim`, tmux session snapshots, shell history. Those are runtime
 files, not configuration, and they are not in this repository.
 
+## Flakes And nix.conf
+
+**nix.conf** is Nix's own settings file
+([reference](https://nix.dev/manual/nix/latest/command-ref/conf-file)). Two
+copies matter: `/etc/nix/nix.conf` for everyone on the machine, and
+`~/.config/nix/nix.conf` for one user. Nix also reads the `NIX_CONFIG`
+environment variable as if it were extra lines of that file, which is how a
+single command can be given a setting without touching either file.
+
+**A flake** is a repository with a `flake.nix` at its root that declares its
+inputs (here: nixpkgs and Home Manager, at exact commits recorded in
+`flake.lock`) and its outputs (here: the four targets, the checks, the
+formatter). Before flakes, a Nix config depended on whatever version of
+nixpkgs the machine's "channel" happened to be at, which is how two machines
+running the same config ended up different. A flake takes its inputs from the
+lock file and nothing else. That is what makes `just apply` give the same
+result on every machine, and why this repository is one.
+
+Flakes, and the `nix <verb>` command line that goes with them (`nix build`,
+`nix run`, `nix flake check`), are still marked **experimental** in Nix and
+are off by default. In practice every Nix user turns them on and has for
+years; "experimental" here means the interface is not yet frozen, not that
+it is unreliable. Off, every command in this repository fails with
+`experimental feature 'nix-command' is disabled`
+([the setting](https://nix.dev/manual/nix/latest/command-ref/conf-file#conf-experimental-features),
+[what each feature is](https://nix.dev/manual/nix/latest/development/experimental-features)).
+
+They are turned on the same way on every machine: one line in
+`/etc/nix/nix.conf`, system-wide, so every user and every nix process sees
+it. Fedora's Nix package ships that line; on macOS and Ubuntu the upstream
+installer does not, so `bootstrap` appends it right after installing Nix.
+`just doctor` checks it is in effect. The per-user file
+`~/.config/nix/nix.conf` is not used.
+
 ## Where Config Files Come From
 
 Home Manager writes the files under `~/.config` as symlinks into the Nix
