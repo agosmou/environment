@@ -61,9 +61,20 @@ check_command() {
 }
 
 # Print a manifest file (platform/fedora/packages, platform/fedora/baseline)
-# with comment lines and blank lines removed, one name per line.
+# with comment lines and blank lines removed, one entry per line. An entry
+# is a package name or the URL of an rpm; URLs are reduced to the package
+# name, the file name up to its version (rustdesk-1.4.9-0.x86_64.rpm ->
+# rustdesk), so the rest of the script only ever sees names.
 manifest() {
-  grep -v -E '^[[:space:]]*(#|$)' "$1" || true
+  local line name
+  while read -r line; do
+    name="$line"
+    if [[ "$line" == http* ]]; then
+      name="$(basename "$line")"
+      name="${name%%-[0-9]*}"
+    fi
+    printf '%s\n' "$name"
+  done < <(grep -v -E '^[[:space:]]*(#|$)' "$1" || true)
 }
 
 # Drift check for dnf. Two directions:
@@ -186,6 +197,7 @@ fi
 case "$target" in
   workstation-*-linux)
     check_command bash
+    check_command rustdesk # from RustDesk's rpm, so not in custom.smoke
 
     check_dnf_drift
 
@@ -232,7 +244,8 @@ case "$target" in
     fi
 
     # /etc/tmpfiles.d/non-nixos-gpu.conf must point at the rule inside the
-    # current Home Manager generation, otherwise /run/opengl-driver is stale.
+    # current Home Manager generation, otherwise /run/opengl-driver is stale
+    # and Ghostty (Nix-built) cannot find the GPU.
     gpu_setup="$HOME/.nix-profile/bin/non-nixos-gpu-setup"
     gpu_root="$(dirname "$(dirname "$(readlink -f "$gpu_setup")")")"
     expected_gpu_conf="$gpu_root/lib/tmpfiles.d/non-nixos-gpu.conf"
@@ -241,6 +254,7 @@ case "$target" in
     else
       fail "non-NixOS GPU integration is stale or missing"
     fi
+
 
     ;;
   workstation-*-darwin)

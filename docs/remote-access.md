@@ -20,8 +20,10 @@ Not managed, per machine:
 
 ## RustDesk
 
-Open-source remote desktop. Managed: the package, Linux via Home Manager
-(`home/desktop/rustdesk.nix`), macOS via Homebrew (`platform/darwin/Brewfile`).
+Open-source remote desktop. Managed: the package, from RustDesk's own builds
+on both platforms: the rpm from its GitHub release on Fedora
+(`platform/fedora/packages`), the Homebrew cask on macOS
+(`platform/darwin/Brewfile`).
 
 Not managed: the app's own settings, the unattended-access password, and the
 macOS permissions below. Those stay on the machine.

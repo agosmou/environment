@@ -17,8 +17,29 @@
   # ~/.config/environment.d, so the app grid and search find it. Log out and
   # in once after the first apply on a new machine for that to take effect.
 
+  # Where the binary comes from. macOS: the Homebrew cask, a repackaging of
+  # the official .dmg (platform/darwin/Brewfile). Fedora: nixpkgs, and this
+  # is the one exception to "GUI apps come from the OS's own channel".
+  #
+  # Why not the Fedora way (dnf copr enable scottames/ghostty)? Ghostty's
+  # install page sorts Linux builds into tiers. Fedora has no package of its
+  # own, so it is not in the "built, tested and verified by the distributions
+  # themselves" tier where Arch, Ubuntu, and Nix sit; the COPR is listed
+  # under "Community Binaries", with the warning that they "carry a much
+  # higher risk" and are "compiled beforehand on a computer that might not
+  # be held to the same security standards". nixpkgs' build is in the
+  # distro-maintained tier, built from source by nixpkgs' CI, and pinned
+  # here by flake.lock. The cost is real: about 900 MiB of its own GTK stack
+  # plus the GPU integration (targets.genericLinux.gpu), which is the setup
+  # the same page describes under "Nix on other distros" for Home Manager.
+  #   https://ghostty.org/docs/install/binary#fedora
+  #   https://ghostty.org/docs/install/binary#nix-on-other-distros
+  # (docs/nix.md, "GUI Apps")
   programs.ghostty = {
     enable = true;
+    # Options:
+    #   null           Home Manager writes the config only; the binary comes from elsewhere
+    #   pkgs.ghostty   Home Manager installs the nixpkgs build too
     package = if pkgs.stdenv.hostPlatform.isDarwin then null else pkgs.ghostty;
     settings = {
       font-family = "JetBrainsMono Nerd Font";

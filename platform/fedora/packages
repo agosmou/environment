@@ -21,3 +21,13 @@
 # doctor and inventory tell the truth about what is on the machine.
 nix
 nix-daemon
+
+# GUI apps come from the OS's own channel when it has a trustworthy build,
+# on both platforms (macOS: platform/darwin/Brewfile); Nix owns the command
+# line. Ghostty is the exception and stays on nixpkgs: Fedora has no package
+# of its own and the COPRs are community builds. docs/nix.md, "GUI Apps".
+
+# Remote desktop. RustDesk's own rpm from its GitHub release, which its
+# docs list first for Fedora. A URL line is installed with dnf like a name;
+# bump the version here to update. https://rustdesk.com/docs/en/client/linux/
+https://github.com/rustdesk/rustdesk/releases/download/1.4.9/rustdesk-1.4.9-0.x86_64.rpm

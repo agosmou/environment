@@ -19,7 +19,10 @@ target := `cat "$HOME/.config/environment/target" 2>/dev/null || true`
 default:
   @just --list
 
-# ---- The daily loop: edit, check, apply -------------------------------------
+# ---- The daily loop: edit, check, sync --------------------------------------
+#
+# sync is the one to type. apply, bootstrap, and doctor are the steps it is
+# made of; each can be run alone to force just that step.
 
 # Runs the checks in flake.nix: every target evaluates, the ones this machine
 # can build are built, scripts are linted. "path:" reads uncommitted files.
@@ -37,6 +40,38 @@ check-all:
 
 # Home Manager calls this "switch", as in switch to the new generation; the
 # recipe is named for what it does to the machine.
+
+# The one command for every machine, laptop included:
+#   1. pull, if the tree is clean (with local edits in progress it skips
+#      the pull and works with what is here)
+#   2. decide: if anything under platform/ or in bootstrap itself differs
+#      between the commit LAST APPLIED on this machine and the tree now
+#      (committed or not), root-level work is needed, so bootstrap runs (it
+#      asks for sudo and applies as part of its run); otherwise apply
+#   3. remember the commit that was applied, for the next decision
+#   4. doctor
+# No prompts, so two machines syncing the same commit end up the same. The
+# last-applied commit lives in ~/.local/state/environment/applied; with no
+# record yet (first sync on a machine) it runs bootstrap, which is safe to
+# repeat.
+
+# Bring this machine up to date: pull, then bootstrap or apply as needed, then doctor
+sync target=target:
+  @[[ -n "{{target}}" ]] || { echo "no target recorded on this machine; pass one: just sync <target>" >&2; exit 1; }
+  cd "{{repo}}" && \
+  if git diff --quiet && git diff --cached --quiet; then git pull --ff-only; else echo "sync: local changes present; not pulling"; fi && \
+  applied_file="$HOME/.local/state/environment/applied" && \
+  applied="$(cat "$applied_file" 2>/dev/null || true)" && \
+  if [[ -n "$applied" ]] && git cat-file -e "$applied" 2>/dev/null && git diff --quiet "$applied" -- platform bootstrap; then \
+    echo "sync: nothing root-level changed since $applied; applying"; just apply "{{target}}"; \
+  else \
+    echo "sync: platform/ or bootstrap changed (or first sync); running bootstrap (sudo)"; just bootstrap "{{target}}"; \
+  fi && \
+  mkdir -p "$(dirname "$applied_file")" && git rev-parse HEAD > "$applied_file" && \
+  just doctor "{{target}}"
+
+# One step of sync: build and activate a new Home Manager generation, no
+# pull, no bootstrap decision. Run alone to force a rebuild.
 
 # Apply the repository to this machine (build and activate a new generation)
 apply target=target:
@@ -66,8 +101,8 @@ build target=target:
   @[[ -n "{{target}}" ]] || { echo "no target recorded on this machine; pass one: just build <target>" >&2; exit 1; }
   nix build 'path:{{repo}}#homeConfigurations."ag@{{target}}".activationPackage'
 
-# Needed after changing anything under platform/ (dnf packages, keyd, GPU
-# rule, Brewfile). Asks for sudo.
+# One step of sync, run when anything under platform/ changed (dnf packages,
+# keyd, Brewfile). Asks for sudo. Run alone to force it.
 
 # Apply the root-level layer again
 bootstrap target=target:

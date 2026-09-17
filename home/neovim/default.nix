@@ -19,8 +19,13 @@ in
     defaultEditor = true;
     viAlias = true;
     vimAlias = true;
-    withNodeJs = true;
-    withPython3 = true;
+    # The config disables every remote-plugin provider (custom/options.lua):
+    # all plugins are Lua, and LSPs and debuggers run as their own binaries.
+    # Options:
+    #   true   bundle a Node.js / Python interpreter for provider-based plugins
+    #   false  none; saves about 250 MiB (Node) and the provider warnings
+    withNodeJs = false;
+    withPython3 = false;
     extraWrapperArgs = [
       "--set"
       "NVIM_DEBUGPY_PYTHON"
@@ -36,7 +41,6 @@ in
       pkgs.gzip
       pkgs.lua-language-server
       pkgs.markdownlint-cli2
-      pkgs.nodejs
       pkgs.pyright
       debugPython
       pkgs.ruff

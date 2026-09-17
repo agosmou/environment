@@ -103,6 +103,30 @@ installer does not, so `bootstrap` appends it right after installing Nix.
 `just doctor` checks it is in effect. The per-user file
 `~/.config/nix/nix.conf` is not used.
 
+## GUI Apps
+
+Nix installs command-line tools well on any Linux; GUI apps are different. A
+GUI app built by nixpkgs cannot use the desktop's own GTK, Mesa, or PipeWire
+(those live in `/usr`, and Nix packages only see `/nix/store`), so it ships
+its own copies, and it needs `/run/opengl-driver`, a NixOS convention, to
+find the GPU at all. Home Manager's `targets.genericLinux.gpu` provides that
+(a root-level tmpfiles rule, installed by the Fedora bootstrap); it is the
+setup Ghostty's own docs describe for Home Manager on non-NixOS.
+
+The rule: **a GUI app comes from the most trustworthy build available for
+the platform**, and Nix owns the command line. Ranked by who built it: the
+project itself, then a distribution's own maintainers (nixpkgs counts as
+one), then community builds. macOS is easy: Homebrew casks repackage the
+projects' official builds. Fedora, per app:
+
+| App | Source on Fedora | Why | Documented at |
+|---|---|---|---|
+| Ghostty | nixpkgs, via Home Manager | Fedora has no package of its own (Ghostty's Zig toolchain and Fedora's do not line up). The dnf options are COPRs, which Ghostty's docs list under "Community Binaries" with the warning that they "carry a much higher risk" than distro or project builds. nixpkgs' build is in the distro-maintained tier ("maintained by a team of Nixpkgs maintainers"), built from source by nixpkgs' CI, and pinned by `flake.lock`. Costs about 900 MiB of its own GTK stack plus the GPU integration, which the same page describes for Home Manager on non-NixOS. | [Fedora](https://ghostty.org/docs/install/binary#fedora), [Nix on other distros](https://ghostty.org/docs/install/binary#nix-on-other-distros) |
+| RustDesk | RustDesk's own rpm from its GitHub release, `dnf` from the URL in `platform/fedora/packages` | The vendor's own build, the first method in its Linux docs. nixpkgs' build is 2.8 GiB and keeps the Rust compiler as a runtime dependency. | <https://rustdesk.com/docs/en/client/linux/> |
+
+Their configuration lives in this repository either way: Home Manager writes
+`~/.config/ghostty/config` regardless of where the binary came from.
+
 ## Where Config Files Come From
 
 Home Manager writes the files under `~/.config` as symlinks into the Nix

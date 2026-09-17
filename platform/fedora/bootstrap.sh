@@ -6,7 +6,7 @@
 #   platform/fedora/bootstrap.sh <repo-dir> <target>
 #
 # What it does:
-#   1. dnf install every package listed in platform/fedora/packages
+#   1. dnf install everything listed in platform/fedora/packages
 #   2. install the tmpfiles rule that lets Nix-built GUI apps find the GPU
 #   3. install the keyd key-remapping daemon as a system service
 #
@@ -33,7 +33,8 @@ command -v sudo >/dev/null 2>&1 || {
 
 # The list lives in platform/fedora/packages so doctor and inventory can read
 # the same file. `grep -v` drops comment lines and blank lines; `mapfile -t`
-# turns the remaining lines into a bash array, one package per element.
+# turns the remaining lines into a bash array, one package per element. A
+# line can be a package name or the URL of an rpm; dnf installs both.
 mapfile -t packages < <(grep -v -E '^[[:space:]]*(#|$)' "$repo_dir/platform/fedora/packages")
 
 if ((${#packages[@]} > 0)); then
@@ -48,7 +49,9 @@ fi
 # a NixOS convention. Fedora keeps its Mesa drivers elsewhere. Home Manager's
 # genericLinux target generates a small script that writes a tmpfiles.d rule
 # pointing /run/opengl-driver at Fedora's drivers, recreated on every boot.
-# Without this, Ghostty falls back to software rendering or fails to start.
+# Without this, Ghostty (the one Nix-built GUI app here) falls back to
+# software rendering or fails to start. This is the setup Ghostty's own docs
+# describe for Home Manager on non-NixOS.
 gpu_setup="$HOME/.nix-profile/bin/non-nixos-gpu-setup"
 if [[ -x "$gpu_setup" ]]; then
   sudo "$gpu_setup"

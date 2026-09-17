@@ -27,7 +27,21 @@ broken environment.
    forgot to commit a file" is caught, and the Mac and ARM configurations
    are built and their tools run before any real machine gets them.
 
-The daily loop is therefore: **edit, check, apply.**
+The daily loop is therefore: **edit, check, sync.**
+
+## Quickstart
+
+| I want to | Run |
+|---|---|
+| Set up a machine that has nothing on it | `curl -fsSL https://raw.githubusercontent.com/agosmou/environment/main/bootstrap \| bash -s -- --target workstation` (or `server`), then `exec $SHELL` |
+| Bring any machine up to date | `just sync` |
+| See a change I just made | `just check`, then `just sync` |
+| Undo the last apply | `just rollback` |
+| Know what this machine should have | `just inventory` |
+| Know whether it actually does | `just doctor` |
+| Add a command-line tool | a file under `home/shell/`, its import in `targets/`, `just sync` |
+| Add a GUI app | `platform/fedora/packages` (Fedora) or `platform/darwin/Brewfile` (Mac), `just sync` |
+| Update every package | `just update`, `just check`, `just sync`, commit `flake.lock` |
 
 ## New Machine
 
@@ -105,17 +119,43 @@ The platform step is the only part that needs root, and it is small:
 
 Everything else on a machine comes from Home Manager and needs no root.
 
+GUI applications come from the most trustworthy build available for the
+platform: Homebrew casks on macOS (they repackage the projects' official
+builds); on Fedora, the vendor's own rpm for RustDesk, and nixpkgs for Ghostty,
+which Fedora does not package itself. Nix owns the command line. The app's
+*configuration* lives here either way and is written by Home Manager. See
+[docs/nix.md](docs/nix.md), "GUI Apps".
+
 ## Layout
 
-| Directory | Contents |
-|---|---|
-| `home/shell/` | bash, zsh, and one file per command-line tool |
-| `home/git/`, `home/ssh/` | git, gh, ssh |
-| `home/neovim/`, `home/tmux/`, `home/terminal/` | editor, multiplexer, Ghostty |
-| `home/desktop/` | things that need a screen: GNOME settings, clipboard, remote desktop; workstation targets only |
-| `home/ai/` | the coding agents: OpenCode, Claude Code, Codex, and the skills all three share (`skills/`) |
-| `targets/` | one file per machine type, listing exactly which of the above it imports |
-| `platform/` | the root-level layer per OS: dnf and Homebrew manifests, keyd, the scripts that apply them |
+Every file in the repository, and what it is for.
+
+| Path | What | Applied by |
+|---|---|---|
+| `flake.nix`, `flake.lock` | The entry point: inputs (nixpkgs, Home Manager) at pinned commits, the four targets, the checks | `just sync` |
+| `targets/<name>/home.nix` | One file per machine type; lists exactly which modules it imports and its per-machine switches | `just sync` |
+| `home/common.nix` | What every target shares: `just`, the recorded target name, the smoke-test registry | `just sync` |
+| `home/shell/` | bash (Linux), zsh (Mac), shared aliases and functions, and one file per command-line tool: atuin, bat, btop, fastfetch, fzf, starship, zoxide, `tools.nix` for plain binaries | `just sync` |
+| `home/git/` | git with delta; gh | `just sync` |
+| `home/ssh/` | ssh client config; Keychain on the Mac | `just sync` |
+| `home/neovim/` | Neovim, its language servers, formatters and debuggers, the Lua config, the plugin lock | `just sync` |
+| `home/tmux/` | tmux, its plugins, the session picker | `just sync` |
+| `home/terminal/ghostty.nix` | Ghostty: config and font everywhere; the binary too on Fedora (nixpkgs), from Homebrew on the Mac | `just sync` |
+| `home/desktop/` | Needs a screen; workstations only: GNOME settings, Wayland clipboard, the keyd binary | `just sync` |
+| `home/ai/` | OpenCode, Claude Code, Codex, and `skills/` shared by all three | `just sync` |
+| `platform/fedora/packages` | dnf packages: Nix itself, RustDesk. The root-level manifest for Fedora | `just sync` → bootstrap |
+| `platform/fedora/baseline` | Packages the Fedora installer marks as user-installed; doctor ignores them when checking for drift | doctor |
+| `platform/fedora/keyd/` | The Caps Lock remap and its systemd unit | `just sync` → bootstrap |
+| `platform/fedora/bootstrap.sh` | The Fedora root-level step: COPR, dnf, keyd | `just sync` → bootstrap |
+| `platform/darwin/Brewfile` | Homebrew casks: Ghostty, RustDesk. The root-level manifest for the Mac | `just sync` → bootstrap |
+| `platform/darwin/bootstrap.sh` | The macOS root-level step: Homebrew, the Brewfile | `just sync` → bootstrap |
+| `bootstrap` | The one-command machine setup; also the root-level step `sync` runs when `platform/` changed | curl, or `just sync` |
+| `justfile` | The commands: sync, check, doctor, inventory, rollback, update, and the steps they are made of | `just` |
+| `scripts/doctor` | Compares the machine to the repository, both directions; read-only | `just doctor` |
+| `scripts/inventory` | Prints everything a target declares; read-only | `just inventory` |
+| `tests/bootstrap.sh` | Target-detection tests for `bootstrap` | `just check` |
+| `.github/workflows/check.yml` | CI: `nix flake check` on x86 Linux, ARM Linux, Apple Silicon, from a clean clone | push |
+| `docs/` | `nix.md` (how Nix works here, flakes, GUI apps), `neovim.md`, `tmux.md`, `remote-access.md` | — |
 
 ## Adding A Target
 
@@ -150,7 +190,7 @@ Manager generation and points the home directory at it. So every change is:
 ```bash
 # 1. edit something, e.g. add a package to home/shell/tools.nix
 just check     # 2. does it build? lints, every target evaluates
-just apply     # 3. make it real on this machine
+just sync      # 3. make it real on this machine (apply, or bootstrap if platform/ changed)
 ```
 
 The machine knows which target it is: the first bootstrap records it at
@@ -166,6 +206,33 @@ just doctor
 ```
 
 `just` alone lists every recipe.
+
+## Keeping Any Machine Current
+
+One command, on every machine:
+
+```bash
+just sync
+```
+
+It pulls, then decides from what changed since the commit last applied on
+this machine: anything under `platform/` or in `bootstrap` itself means
+root-level work, so it runs the bootstrap (sudo); otherwise it applies. Then
+it runs doctor. No prompts, so two machines syncing the same commit end up
+the same.
+
+Local edits do not stop it: with uncommitted changes it skips the pull and
+applies what is in the tree, committed or not. `just apply` is one step of
+`sync`; there is no situation in normal use where you need it directly.
+
+| Situation | Command |
+|---|---|
+| Any machine, any time | `just sync` |
+| Just made an edit, want it live | `just check`, then `just sync` |
+| First bootstrap on a new machine | the curl line above, then `exec $SHELL` once |
+
+Nothing needs a re-login after a sync. A new alias or PATH entry shows up in
+the next terminal you open, as with any dotfiles.
 
 ## When Something Is Wrong
 

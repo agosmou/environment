@@ -9,7 +9,6 @@
     ../../home/ai/skills
     ../../home/desktop/gnome.nix
     ../../home/desktop/keyd.nix
-    ../../home/desktop/rustdesk.nix
     ../../home/desktop/wl-clipboard.nix
     ../../home/git/gh.nix
     ../../home/git/git.nix
