@@ -33,7 +33,12 @@ set -uo pipefail
 
 target="${1:-}"
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Three outcomes per check:
+#   ok    as declared
+#   fail  broken or missing; the machine does not match the repository
+#   look  nothing is broken, but a human should look (leftover backups)
 failures=0
+looks=0
 checks=0
 
 if [[ -z "$target" ]]; then
@@ -50,6 +55,12 @@ fail() {
   ((checks += 1))
   ((failures += 1))
   printf 'fail %s\n' "$1" >&2
+}
+
+look() {
+  ((checks += 1))
+  ((looks += 1))
+  printf 'look %s\n' "$1" >&2
 }
 
 check_command() {
@@ -299,7 +310,7 @@ mapfile -t backups < <(find "$HOME" -maxdepth 3 -name '*.pre-home-manager' -not 
 if ((${#backups[@]} == 0)); then
   pass "no pre-home-manager backups waiting to be reconciled"
 else
-  fail "${#backups[@]} backup(s) from before Home Manager took over; have a look, then delete them"
+  look "${#backups[@]} backup(s) from before Home Manager took over; have a look, then delete them"
   {
     printf '\n'
     printf '     When Home Manager first ran here it found these files already in place and\n'
@@ -310,7 +321,7 @@ else
       printf '       diff %s %s\n' "${backup/#"$HOME"/\~}" "${managed/#"$HOME"/\~}"
     done
     printf '\n     If nothing in them matters (or once you have moved what does into the\n'
-    printf '     repository), delete them and this check goes green:\n\n'
+    printf '     repository), delete them and this goes away:\n\n'
     printf '       rm'
     for backup in "${backups[@]}"; do printf ' %s' "${backup/#"$HOME"/\~}"; done
     printf '\n       just sync\n\n'
@@ -349,10 +360,11 @@ else
   fail "Neovim Lua or dependency validation failed"
 fi
 
-if ((failures == 0)); then
-  printf '\n%d checks, all good\n' "$checks"
-else
-  printf '\n%d checks, %d to look at (the "fail" lines above)\n' "$checks" "$failures"
-fi
-# Exit with the number of findings so scripts and sync can tell.
+summary="$checks checks"
+((failures == 0 && looks == 0)) && summary="$summary, all good"
+((failures > 0)) && summary="$summary, $failures failed (the \"fail\" lines above)"
+((looks > 0)) && summary="$summary, $looks to look at (the \"look\" lines above)"
+printf '\n%s\n' "$summary"
+# Exit code: the number of real failures. A "look" does not fail the run;
+# the machine works, it just has housekeeping waiting.
 exit "$failures"

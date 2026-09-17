@@ -55,6 +55,14 @@ check-all:
 # record yet (first sync on a machine) it runs bootstrap, which is safe to
 # repeat.
 
+# Note: the last step runs scripts/doctor directly rather than `just doctor`.
+# doctor exits non-zero when it finds something broken, which is right for
+# scripts, but a nested `just` reacts to that by printing a red
+# "error: recipe `doctor` failed" banner. Seen at the bottom of `just sync`,
+# that reads as "sync failed", when in fact sync finished and doctor is
+# simply reporting. Calling the script directly means the only messages the
+# user sees are doctor's own summary and sync's closing line.
+
 # Bring this machine up to date: pull, then bootstrap or apply as needed, then doctor
 sync target=target:
   @[[ -n "{{target}}" ]] || { echo "no target recorded on this machine; pass one: just sync <target>" >&2; exit 1; }
@@ -70,10 +78,10 @@ sync target=target:
   fi && \
   mkdir -p "$(dirname "$applied_file")" && git rev-parse HEAD > "$applied_file" && \
   echo "== sync: doctor" && \
-  if just doctor "{{target}}"; then \
-    echo "== sync: done. This machine matches the repository."; \
+  if "{{repo}}/scripts/doctor" "{{target}}"; then \
+    echo "== sync: done."; \
   else \
-    echo "== sync: done. The machine is up to date; doctor listed something to look at above."; \
+    echo "== sync: done, but doctor found something broken; see the \"fail\" lines above."; \
   fi
 
 # One step of sync: build and activate a new Home Manager generation, no
