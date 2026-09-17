@@ -32,7 +32,6 @@ in
       "${debugPython}/bin/python"
     ];
     extraPackages = [
-      pkgs.black
       pkgs.curl
       pkgs.delve
       pkgs.diffutils
@@ -41,7 +40,7 @@ in
       pkgs.gzip
       pkgs.lua-language-server
       pkgs.markdownlint-cli2
-      pkgs.pyright
+      pkgs.pyrefly # Python language server and type checker
       debugPython
       pkgs.ruff
       pkgs.rust-analyzer

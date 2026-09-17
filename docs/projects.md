@@ -19,6 +19,15 @@ The **global layer** is `home/dev/`, one file per tool, on every target:
 | bun | JS/TS runtime and package manager | one global version |
 | rustup, cargo-nextest | `cargo`, `rustc`, `clippy`, `rustfmt`; `cargo nextest run` | `~/.rustup/`, per toolchain |
 
+Python type checking is pyrefly, inside Neovim and as `pyrefly check`. With
+no config it runs a lenient preset (so untyped code is not a wall of errors);
+a project turns on full checking with two lines in `pyproject.toml`:
+
+```toml
+[tool.pyrefly]
+preset = "default"   # or "strict"
+```
+
 Two of these (uv, rustup) are *managers*: the global thing is the tool, and
 the versions it installs are runtime state on the machine, controlled per
 project by `.python-version` / `pyproject.toml` and `rust-toolchain.toml`.

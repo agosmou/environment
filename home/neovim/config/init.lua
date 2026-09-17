@@ -641,64 +641,35 @@ do
     -- ts_ls = {},
 
     -- Python language features: completion, go-to-def, hover, type checking.
-    -- Root-gated: only attaches in projects with pyproject.toml/setup.py/etc, so
-    -- it never activates in non-Python projects.
+    -- Pyrefly (Meta; stable 1.0 since May 2026, Rust, no Node inside). Nix
+    -- installs the binary (home/neovim/default.nix); nvim-lspconfig ships the
+    -- server definition, which root-gates on pyproject.toml/setup.py/etc so it
+    -- never attaches in non-Python projects.
     --
-    -- VENV AUTODETECT: every project here uses a top-level `.venv/`. Without an
-    -- explicit interpreter, pyright relies on the $VIRTUAL_ENV env var, which is
-    -- fragile — if nvim wasn't launched from a shell with the venv activated
-    -- (tmux/restored sessions, opening nvim before `source .venv/bin/activate`),
-    -- pyright falls back to a system Python that lacks the project's
-    -- site-packages, producing phantom import errors. before_init below finds a
-    -- `.venv` in the LSP root and points pyright at its interpreter explicitly,
-    -- so it works regardless of how nvim was started. To verify which interpreter
-    -- is live: `:lua =vim.lsp.get_clients({name='pyright'})[1].settings.python`
-    pyright = {
-      before_init = function(_, config)
-        local root = config.root_dir
-        if not root then
-          return
-        end
-        local sep = package.config:sub(1, 1)
-        -- GUARD: if the project ships its own pyright config, get out of the way
-        -- and let pyright read it natively. Injecting pythonPath here would
-        -- override an intentional pyrightconfig.json / [tool.pyright] block.
-        if vim.fn.filereadable(root .. sep .. 'pyrightconfig.json') == 1 then
-          return
-        end
-        local pyproject = root .. sep .. 'pyproject.toml'
-        if vim.fn.filereadable(pyproject) == 1 then
-          for _, line in ipairs(vim.fn.readfile(pyproject)) do
-            if line:match '^%[tool%.pyright%]' then
-              return
-            end
-          end
-        end
-        -- Prefer a project-local .venv; fall back to $VIRTUAL_ENV if present.
-        -- (No bare `python3` fallback on purpose; use the project's interpreter.)
-        local venv = root .. sep .. '.venv'
-        local py = venv .. sep .. 'bin' .. sep .. 'python'
-        if vim.fn.executable(py) == 0 then
-          venv = vim.env.VIRTUAL_ENV
-          py = venv and (venv .. sep .. 'bin' .. sep .. 'python') or nil
-        end
-        if py and vim.fn.executable(py) == 1 then
-          config.settings = config.settings or {}
-          config.settings.python = config.settings.python or {}
-          config.settings.python.pythonPath = py
-          config.settings.python.venvPath = vim.fn.fnamemodify(venv, ':h')
-          config.settings.python.venv = vim.fn.fnamemodify(venv, ':t')
-        end
-      end,
-    },
+    -- VENV: nothing to configure. Pyrefly finds the interpreter itself: an
+    -- activated venv first, then `.venv`/`venv`/`env` walking up from the
+    -- project root, then `python3` on PATH. (pyright needed a 35-line hook
+    -- here to do the same; that is what it replaced.) A project's own
+    -- [tool.pyrefly] in pyproject.toml, or a pyrefly.toml, wins over all of
+    -- that; a leftover pyrightconfig.json or [tool.pyright] is read too.
+    -- To see what it resolved: `:LspInfo`, or `pyrefly check` in the project.
+    --
+    -- HOW STRICT: a project with no pyrefly config gets the lenient "basic"
+    -- preset on purpose (only high-confidence, locally-fixable errors), so
+    -- an untyped codebase is not a wall of red. Real type checking, e.g. a
+    -- wrong return type, needs the project to opt in:
+    --   [tool.pyrefly]      in pyproject.toml
+    --   preset = "default"  (or "strict")
+    -- docs/projects.md's template includes it.
+    pyrefly = {},
 
     -- Ruff LSP: fast lint diagnostics + quick-fixes + import organizing.
     -- Currently OFF. To enable: uncomment the block below.
     --   - It respects each project's [tool.ruff] in pyproject.toml, so it won't
     --     impose rules a project hasn't opted into.
-    --   - We disable its hover so pyright stays the source of hover/types.
-    --   - Formatting stays separate (see conform.nvim below) so ruff won't fight
-    --     black; flip the formatter there when you want ruff to format too.
+    --   - We disable its hover so pyrefly stays the source of hover/types.
+    --   - Formatting is conform.nvim's job (below), which already uses
+    --     ruff_format; this LSP would add lint diagnostics and quick-fixes.
     -- ruff = {
     --   on_attach = function(client)
     --     client.server_capabilities.hoverProvider = false
@@ -744,8 +715,8 @@ do
 
   -- Mason used to live here. It was an in-editor package manager that
   -- downloaded language servers, formatters, linters, and debug adapters into
-  -- ~/.local/share/nvim/mason (pyright, lua-language-server, stylua, black,
-  -- ruff, markdownlint-cli2, codelldb, delve, debugpy, ...) and
+  -- ~/.local/share/nvim/mason (language servers, stylua, ruff,
+  -- markdownlint-cli2, codelldb, delve, debugpy, ...) and
   -- mason-tool-installer kept that list in sync on startup. Nix now installs
   -- the same executables into Neovim's PATH (see home/neovim/default.nix), so
   -- there is nothing left for Mason to manage. To add a tool, add its package
@@ -757,34 +728,6 @@ do
   end
 end
 
--- :PyrightVenv — print the interpreter pyright actually resolved for the current
--- buffer's client. Reads the python settings our before_init hook injected; if
--- empty (e.g. project ships its own pyrightconfig.json and the hook bowed out),
--- points you at :LspLog where pyright records the path it chose itself.
-vim.api.nvim_create_user_command('PyrightVenv', function()
-  local clients = vim.lsp.get_clients { name = 'pyright', bufnr = 0 }
-  if vim.tbl_isempty(clients) then
-    clients = vim.lsp.get_clients { name = 'pyright' }
-  end
-  if vim.tbl_isempty(clients) then
-    vim.notify('pyright: no active client', vim.log.levels.WARN)
-    return
-  end
-  local c = clients[1]
-  local py = (c.settings and c.settings.python) or (c.config.settings and c.config.settings.python)
-  if py and py.pythonPath then
-    vim.notify(
-      ('pyright interpreter:\n  %s\n  root: %s'):format(py.pythonPath, c.root_dir or '?'),
-      vim.log.levels.INFO
-    )
-  else
-    vim.notify(
-      'pyright did not set pythonPath via the hook (project may have its own '
-        .. 'pyrightconfig.json/[tool.pyright]).\nCheck :LspLog for the resolved path.',
-      vim.log.levels.INFO
-    )
-  end
-end, { desc = 'Show the interpreter/venv pyright resolved for this buffer' })
 
 -- ============================================================
 -- SECTION 6: FORMATTING
@@ -794,30 +737,6 @@ do
   -- [[ Formatting ]]
   vim.pack.add { gh 'stevearc/conform.nvim' }
 
-  -- Pick the Python formatter PER PROJECT, not globally. You are NOT forced into
-  -- one default: this inspects the nearest pyproject.toml and uses ruff if the
-  -- project configures ruff (a [tool.ruff] table or ruff in [tool.*]), otherwise
-  -- black. Projects with neither fall through to black as a last resort.
-  local function python_formatter(bufnr)
-    local fname = vim.api.nvim_buf_get_name(bufnr)
-    local found = vim.fs.find('pyproject.toml', {
-      upward = true,
-      path = vim.fs.dirname(fname ~= '' and fname or vim.uv.cwd()),
-    })[1]
-    if found then
-      local ok, contents = pcall(vim.fn.readfile, found)
-      if ok and contents then
-        local text = table.concat(contents, '\n')
-        if text:find('%[tool%.ruff') or text:find('ruff') then
-          return { 'ruff_format' }
-        end
-        if text:find('%[tool%.black%]') then
-          return { 'black' }
-        end
-      end
-    end
-    return { 'black' } -- fallback when no project preference is detected
-  end
 
   require('conform').setup {
     notify_on_error = false,
@@ -837,8 +756,10 @@ do
     -- You can also specify external formatters in here.
     formatters_by_ft = {
       -- rust = { 'rustfmt' },
-      -- Python: per-project choice (ruff vs black) — see python_formatter above.
-      python = python_formatter,
+      -- ruff's formatter is black-compatible and reads the project's
+      -- [tool.ruff] settings. (black itself was dropped: the only thing it
+      -- added was honoring a project's [tool.black] line-length.)
+      python = { 'ruff_format' },
       lua = { 'stylua' },
       --
       -- You can use 'stop_after_first' to run the first available formatter from the list

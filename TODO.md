@@ -10,8 +10,11 @@ Short list of what is next. Done items are deleted, not ticked.
   each machine and `Host hagp` in `~/.ssh/config.local`.
 - Cloudflare: decide which product (cloudflared, WARP, or wrangler), then add
   it.
-- black: keep only if working on repos that configure black; otherwise drop it
-  and simplify the Python formatter choice in `init.lua` to `ruff_format`.
+- ty (Astral's Python type checker and language server): still 0.0.x beta as
+  of 2026-09. Revisit as a pyrefly replacement once it ships a stable release;
+  it is the same authors as uv and ruff.
+- Claude Desktop on Fedora: Anthropic's Linux beta ships .deb only. Add the
+  rpm to `platform/fedora/packages` when one exists.
 - Bootstrap end to end in CI: a Fedora container with systemd and an `ag`
   user runs the real `./bootstrap`, then `doctor` must be clean.
 - Branch protection on `main` requiring the three CI checks.
