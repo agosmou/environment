@@ -41,6 +41,7 @@ The daily loop is therefore: **edit, check, sync.**
 | Know whether it actually does | `just doctor` |
 | Add a command-line tool | a file under `home/shell/`, its import in `targets/`, `just sync` |
 | Add a GUI app | `platform/fedora/packages` (Fedora) or `platform/darwin/Brewfile` (Mac), `just sync` |
+| Start or enter a project with its own tools | see [docs/projects.md](docs/projects.md) |
 | Update every package | `just update`, `just check`, `just sync`, commit `flake.lock` |
 
 ## New Machine
@@ -135,19 +136,21 @@ Every file in the repository, and what it is for.
 | `flake.nix`, `flake.lock` | The entry point: inputs (nixpkgs, Home Manager) at pinned commits, the four targets, the checks | `just sync` |
 | `targets/<name>/home.nix` | One file per machine type; lists exactly which modules it imports and its per-machine switches | `just sync` |
 | `home/common.nix` | What every target shares: `just`, the recorded target name, the smoke-test registry | `just sync` |
-| `home/shell/` | bash (Linux), zsh (Mac), shared aliases and functions, and one file per command-line tool: atuin, bat, btop, fastfetch, fzf, starship, zoxide, `tools.nix` for plain binaries | `just sync` |
+| `home/shell/` | bash (Linux), zsh (Mac), shared aliases and functions, and one file per command-line tool: atuin, bat, btop, direnv, fastfetch, fzf, starship, zoxide, `tools.nix` for plain binaries | `just sync` |
+| `home/dev/` | Language tooling, global: uv (Python), go, bun, rustup + cargo-nextest (Rust). A project's own flake wins inside its directory | `just sync` |
 | `home/git/` | git with delta; gh | `just sync` |
 | `home/ssh/` | ssh client config; Keychain on the Mac | `just sync` |
 | `home/neovim/` | Neovim, its language servers, formatters and debuggers, the Lua config, the plugin lock | `just sync` |
 | `home/tmux/` | tmux, its plugins, the session picker | `just sync` |
 | `home/terminal/ghostty.nix` | Ghostty: config and font everywhere; the binary too on Fedora (nixpkgs), from Homebrew on the Mac | `just sync` |
-| `home/desktop/` | Needs a screen; workstations only: GNOME settings, Wayland clipboard, the keyd binary | `just sync` |
+| `home/desktop/` | Needs a screen; workstations only: GNOME settings (`gnome.nix`) and their macOS counterparts (`macos.nix`), Wayland clipboard, the keyd binary, music and chat apps (`apps.nix`) | `just sync` |
 | `home/ai/` | OpenCode, Claude Code, Codex, and `skills/` shared by all three | `just sync` |
 | `platform/fedora/packages` | dnf packages: Nix itself, RustDesk. The root-level manifest for Fedora | `just sync` → bootstrap |
 | `platform/fedora/baseline` | Packages the Fedora installer marks as user-installed; doctor ignores them when checking for drift | doctor |
 | `platform/fedora/keyd/` | The Caps Lock remap and its systemd unit | `just sync` → bootstrap |
+| `platform/fedora/battery.conf` | Charge limit (80%) as a tmpfiles rule | `just sync` → bootstrap |
 | `platform/fedora/bootstrap.sh` | The Fedora root-level step: COPR, dnf, keyd | `just sync` → bootstrap |
-| `platform/darwin/Brewfile` | Homebrew casks: Ghostty, RustDesk. The root-level manifest for the Mac | `just sync` → bootstrap |
+| `platform/darwin/Brewfile` | Homebrew casks: Ghostty, RustDesk, Spotify, Slack, Discord. The root-level manifest for the Mac | `just sync` → bootstrap |
 | `platform/darwin/bootstrap.sh` | The macOS root-level step: Homebrew, the Brewfile | `just sync` → bootstrap |
 | `bootstrap` | The one-command machine setup; also the root-level step `sync` runs when `platform/` changed | curl, or `just sync` |
 | `justfile` | The commands: sync, check, doctor, inventory, rollback, update, and the steps they are made of | `just` |
@@ -308,3 +311,5 @@ Homebrew do not, so doctor lists the leftovers until you remove them.
 - [docs/neovim.md](docs/neovim.md): how the editor config is laid out, how to
   add a plugin or language server, and the keys added on top of Kickstart.
 - [docs/tmux.md](docs/tmux.md): keys and behaviour.
+- [docs/projects.md](docs/projects.md): global language tools versus a
+  project's own flake, direnv, and a template for starting a project.

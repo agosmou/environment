@@ -7,6 +7,10 @@
     ../../home/ai/codex.nix
     ../../home/ai/opencode.nix
     ../../home/ai/skills
+    ../../home/dev/bun.nix
+    ../../home/dev/go.nix
+    ../../home/dev/rust.nix
+    ../../home/dev/uv.nix
     ../../home/git/gh.nix
     ../../home/git/git.nix
     ../../home/neovim
@@ -14,6 +18,7 @@
     ../../home/shell/bash.nix
     ../../home/shell/bat.nix
     ../../home/shell/btop.nix
+    ../../home/shell/direnv.nix
     ../../home/shell/fastfetch.nix
     ../../home/shell/fzf.nix
     ../../home/shell/starship.nix

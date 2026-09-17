@@ -209,6 +209,11 @@ case "$target" in
   workstation-*-linux)
     check_command bash
     check_command rustdesk # from RustDesk's rpm, so not in custom.smoke
+    # Electron apps: their --version needs a display, so they are not in
+    # custom.smoke; only presence is checked.
+    check_command spotify
+    check_command slack
+    check_command discord
 
     check_dnf_drift
 
@@ -254,6 +259,27 @@ case "$target" in
       fail "installed keyd service is stale"
     fi
 
+    # Battery charge limit: the installed rule must match the repository, and
+    # on a machine with a battery the firmware must currently hold the values
+    # the rule sets. A mismatch means the rule has not been applied yet
+    # (run bootstrap) or something else changed the thresholds.
+    if cmp -s "$repo_dir/platform/fedora/battery.conf" /etc/tmpfiles.d/environment-battery.conf; then
+      pass "installed battery charge-limit rule matches repository"
+    else
+      fail "installed battery charge-limit rule is stale or missing"
+    fi
+    if [[ -r /sys/class/power_supply/BAT0/charge_control_end_threshold ]]; then
+      want_end="$(awk '/charge_control_end_threshold/ {print $NF}' "$repo_dir/platform/fedora/battery.conf")"
+      want_start="$(awk '/charge_control_start_threshold/ {print $NF}' "$repo_dir/platform/fedora/battery.conf")"
+      have_end="$(cat /sys/class/power_supply/BAT0/charge_control_end_threshold)"
+      have_start="$(cat /sys/class/power_supply/BAT0/charge_control_start_threshold)"
+      if [[ "$have_end" == "$want_end" && "$have_start" == "$want_start" ]]; then
+        pass "battery charges to $have_end% (resumes below $have_start%)"
+      else
+        fail "battery thresholds are $have_start/$have_end%, rule says $want_start/$want_end%"
+      fi
+    fi
+
     # /etc/tmpfiles.d/non-nixos-gpu.conf must point at the rule inside the
     # current Home Manager generation, otherwise /run/opengl-driver is stale
     # and Ghostty (Nix-built) cannot find the GPU.
@@ -296,6 +322,18 @@ case "$target" in
     fail "unknown target $target"
     ;;
 esac
+
+# Rust: rustup is installed by Home Manager, but the toolchain itself is
+# something rustup downloads once per machine (home/dev/rust.nix). Until
+# then `cargo` and `rustc` exist as proxies that fail. Not broken, just
+# not done yet, so a look rather than a fail.
+if command -v rustup >/dev/null 2>&1; then
+  if rustup show active-toolchain >/dev/null 2>&1; then
+    pass "rust toolchain is installed ($(rustup show active-toolchain 2>/dev/null | awk '{print $1}'))"
+  else
+    look "no rust toolchain installed yet; once per machine: rustup default stable"
+  fi
+fi
 
 # Backups from taking over a machine that already had an environment.
 #

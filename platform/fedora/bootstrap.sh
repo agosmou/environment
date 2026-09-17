@@ -9,6 +9,7 @@
 #   1. dnf install everything listed in platform/fedora/packages
 #   2. install the tmpfiles rule that lets Nix-built GUI apps find the GPU
 #   3. install the keyd key-remapping daemon as a system service
+#   4. install the battery charge-limit rule
 #
 # Every step is idempotent: re-running after a package update or a config
 # change refreshes what changed and leaves the rest alone.
@@ -96,5 +97,14 @@ sudo install -m 0644 "$keyd_service" /etc/systemd/system/keyd.service
 sudo systemctl daemon-reload
 sudo systemctl reset-failed keyd.service
 sudo systemctl enable --now keyd.service
+
+# ---- 4. Battery charge limit -----------------------------------------------
+
+# A tmpfiles.d rule (platform/fedora/battery.conf) writes the firmware's
+# charge thresholds at boot. `systemd-tmpfiles --create` applies it now too,
+# so the limit takes effect without a reboot. On a machine without a battery
+# the rule's paths are missing and tmpfiles skips them with a warning.
+sudo install -m 0644 "$repo_dir/platform/fedora/battery.conf" /etc/tmpfiles.d/environment-battery.conf
+sudo systemd-tmpfiles --create /etc/tmpfiles.d/environment-battery.conf || true
 
 printf 'Fedora platform setup complete.\n'

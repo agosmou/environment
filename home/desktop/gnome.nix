@@ -38,6 +38,34 @@
       repeat-interval = lib.hm.gvariant.mkUint32 30;
     };
 
+    # Touchpad. Every key GNOME's Settings > Mouse & Touchpad exposes.
+    "org/gnome/desktop/peripherals/touchpad" = {
+      # Options:
+      #   true   natural: content follows the fingers, as on a phone
+      #   false  traditional: the scrollbar follows the fingers
+      natural-scroll = true;
+      # Options:
+      #   true   tap to click
+      #   false  press to click
+      tap-to-click = true;
+      # Options:
+      #   true   scroll with two fingers anywhere on the pad
+      #   false  scroll only on the right edge (see edge-scrolling-enabled)
+      two-finger-scrolling-enabled = true;
+      # How a right-click is made.
+      # Options:
+      #   "fingers"  two-finger tap or click (the GNOME default)
+      #   "areas"    click in the bottom-right corner of the pad
+      #   "none"     no right-click from the touchpad
+      #   "default"  whatever the hardware driver prefers
+      click-method = "fingers";
+    };
+
+    # Mouse: a wheel scrolls the traditional way even though the touchpad
+    # is natural, since a wheel is not a surface.
+    # Options: true, false (same meanings as for the touchpad)
+    "org/gnome/desktop/peripherals/mouse".natural-scroll = false;
+
     # No custom shortcut for the Activities overview (app search): tapping
     # Super alone already opens it, GNOME's default. That is the Spotlight
     # equivalent; Cmd+Space on the Mac, Super on Fedora.
