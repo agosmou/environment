@@ -198,7 +198,12 @@ fi
 #              daemon, so nothing else needs configuring.
 #   Otherwise  the upstream installer from nixos.org in multi-user (daemon)
 #              mode. --yes answers its prompts.
+# Remember whether this run installed Nix or found it already there. Only
+# used at the very end, to decide whether to tell the user to start a new
+# shell: that is needed once, right after the install, and never again.
+installed_nix=false
 if ! load_nix; then
+  installed_nix=true
   case "$distro" in
     fedora)
       printf 'Installing Nix from the Fedora package...\n'
@@ -288,14 +293,17 @@ case "$kernel" in
 esac
 
 printf 'Environment bootstrap complete: ag@%s\n' "$target"
-# The last step is the user's, not the script's: a script runs in its own
-# child process and can never change the PATH of the shell that started it
-# (the one you are typing in). The new ~/.bashrc is in place; it takes
-# effect in the next shell. Running `exec bash -l` from INSIDE this script,
-# to automate that, would replace the script's process with a fresh login
-# shell, which the user would be sitting in without knowing (a hidden nested
-# shell), and which would hang waiting for input when the bootstrap runs
-# non-interactively (CI, `ssh host bootstrap`). So print the instruction.
-# `exec $SHELL -l` works the same and is shell-agnostic (zsh on macOS).
-# shellcheck disable=SC2016  # the literal $SHELL is meant for the user to type
-printf 'Open a new shell (or: exec $SHELL -l) so PATH picks up ~/.nix-profile/bin.\n'
+# Only after the first bootstrap on a machine, when Nix was installed just
+# now: the shell this ran in predates the new ~/.bashrc, so it has no
+# ~/.nix-profile/bin on PATH until a new shell starts. That last step is the
+# user's, not the script's: a script runs in its own child process and can
+# never change the PATH of the shell that started it. Running `exec bash -l`
+# from INSIDE this script, to automate it, would replace the script's
+# process with a fresh login shell the user is sitting in without knowing,
+# and would hang waiting for input when run non-interactively (CI,
+# `ssh host bootstrap`). So print the instruction. On later runs, ~/.bashrc
+# is already the managed one and nothing needs doing.
+if [[ "$installed_nix" == true ]]; then
+  # shellcheck disable=SC2016  # the literal $SHELL is meant for the user to type
+  printf 'Nix was just installed. Start a new shell so it is on PATH:\n\n    exec $SHELL -l\n\n'
+fi

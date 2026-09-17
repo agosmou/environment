@@ -58,17 +58,23 @@ check-all:
 # Bring this machine up to date: pull, then bootstrap or apply as needed, then doctor
 sync target=target:
   @[[ -n "{{target}}" ]] || { echo "no target recorded on this machine; pass one: just sync <target>" >&2; exit 1; }
-  cd "{{repo}}" && \
-  if git diff --quiet && git diff --cached --quiet; then git pull --ff-only; else echo "sync: local changes present; not pulling"; fi && \
+  @cd "{{repo}}" && \
+  echo "== sync: pull" && \
+  if git diff --quiet && git diff --cached --quiet; then git pull --ff-only; else echo "local changes present; not pulling"; fi && \
   applied_file="$HOME/.local/state/environment/applied" && \
   applied="$(cat "$applied_file" 2>/dev/null || true)" && \
   if [[ -n "$applied" ]] && git cat-file -e "$applied" 2>/dev/null && git diff --quiet "$applied" -- platform bootstrap; then \
-    echo "sync: nothing root-level changed since $applied; applying"; just apply "{{target}}"; \
+    echo "== sync: apply (nothing root-level changed since ${applied:0:7})" && just apply "{{target}}"; \
   else \
-    echo "sync: platform/ or bootstrap changed (or first sync); running bootstrap (sudo)"; just bootstrap "{{target}}"; \
+    echo "== sync: bootstrap (platform/ or bootstrap changed, or first sync; asks for sudo)" && just bootstrap "{{target}}"; \
   fi && \
   mkdir -p "$(dirname "$applied_file")" && git rev-parse HEAD > "$applied_file" && \
-  just doctor "{{target}}"
+  echo "== sync: doctor" && \
+  if just doctor "{{target}}"; then \
+    echo "== sync: done. This machine matches the repository."; \
+  else \
+    echo "== sync: done. The machine is up to date; doctor listed something to look at above."; \
+  fi
 
 # One step of sync: build and activate a new Home Manager generation, no
 # pull, no bootstrap decision. Run alone to force a rebuild.

@@ -299,13 +299,22 @@ mapfile -t backups < <(find "$HOME" -maxdepth 3 -name '*.pre-home-manager' -not 
 if ((${#backups[@]} == 0)); then
   pass "no pre-home-manager backups waiting to be reconciled"
 else
-  fail "${#backups[@]} file(s) Home Manager pushed aside are not reconciled yet:"
-  for backup in "${backups[@]}"; do
-    managed="${backup%.pre-home-manager}"
-    printf '       %s\n' "$backup" >&2
-    printf '         compare: diff %s %s\n' "$backup" "$managed" >&2
-  done
-  printf '       Move what matters into the repository, then: rm <backup>\n' >&2
+  fail "${#backups[@]} backup(s) from before Home Manager took over; have a look, then delete them"
+  {
+    printf '\n'
+    printf '     When Home Manager first ran here it found these files already in place and\n'
+    printf '     kept them as backups. Usually they are the stock ones the OS ships and\n'
+    printf '     everything in them is already in the repository. To see what differs:\n\n'
+    for backup in "${backups[@]}"; do
+      managed="${backup%.pre-home-manager}"
+      printf '       diff %s %s\n' "${backup/#"$HOME"/\~}" "${managed/#"$HOME"/\~}"
+    done
+    printf '\n     If nothing in them matters (or once you have moved what does into the\n'
+    printf '     repository), delete them and this check goes green:\n\n'
+    printf '       rm'
+    for backup in "${backups[@]}"; do printf ' %s' "${backup/#"$HOME"/\~}"; done
+    printf '\n       just sync\n\n'
+  } >&2
 fi
 
 # Home Manager manages these as symlinks into the Nix store. A regular file
@@ -340,5 +349,10 @@ else
   fail "Neovim Lua or dependency validation failed"
 fi
 
-printf '\n%d checks, %d failures\n' "$checks" "$failures"
+if ((failures == 0)); then
+  printf '\n%d checks, all good\n' "$checks"
+else
+  printf '\n%d checks, %d to look at (the "fail" lines above)\n' "$checks" "$failures"
+fi
+# Exit with the number of findings so scripts and sync can tell.
 exit "$failures"

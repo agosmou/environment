@@ -47,5 +47,12 @@
 
     xdg.enable = true;
     programs.home-manager.enable = true;
+    # Home Manager prints "N unread news items" after every apply. The news
+    # is release notes; read them with `home-manager news` when curious.
+    # Options:
+    #   "silent"  never mention it
+    #   "notify"  print the count after each apply (the default)
+    #   "show"    print the full news after each apply
+    news.display = "silent";
   };
 }
