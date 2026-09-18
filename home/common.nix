@@ -53,8 +53,14 @@
 
     home.packages = [
       pkgs.just # the command runner for this repository's justfile
+      # bash 5 for this repository's own scripts (doctor, inventory,
+      # bootstrap), which use mapfile and other bash 4+ features. Linux has
+      # it from the OS; macOS ships bash 3.2 and nothing else provides a
+      # newer one, so `#!/usr/bin/env bash` would fail there.
+      pkgs.bash
     ];
     custom.smoke.just = "just --version";
+    custom.smoke.bash = "bash --version";
 
     xdg.enable = true;
     programs.home-manager.enable = true;

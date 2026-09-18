@@ -13,6 +13,7 @@
     ../../home/dev/js.nix
     ../../home/dev/rust.nix
     ../../home/dev/uv.nix
+    ../../home/dev/xcode.nix
     ../../home/git/gh.nix
     ../../home/git/git.nix
     ../../home/neovim
