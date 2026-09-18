@@ -92,6 +92,7 @@
               ${./scripts/doctor} \
               ${./scripts/inventory} \
               ${./platform/fedora/bootstrap.sh} \
+              ${./platform/debian/bootstrap.sh} \
               ${./platform/darwin/bootstrap.sh} \
               ${./tests/bootstrap.sh} \
               ${./home/shell/functions.sh}

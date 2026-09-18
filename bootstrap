@@ -282,6 +282,9 @@ case "$kernel" in
       fedora)
         "$repo_dir/platform/fedora/bootstrap.sh" "$repo_dir" "$target"
         ;;
+      debian|ubuntu)
+        "$repo_dir/platform/debian/bootstrap.sh" "$repo_dir" "$target"
+        ;;
       *)
         printf 'No privileged platform steps for Linux distribution %s.\n' "${distro:-unknown}"
         ;;

@@ -328,7 +328,17 @@ case "$target" in
     ;;
   server-*-linux)
     check_command bash
-    pass "server target has no desktop health checks"
+    # platform/debian/packages, on a Debian/Ubuntu server: each listed
+    # package must be installed. (`dpkg -s` exits non-zero if not.)
+    if command -v dpkg >/dev/null 2>&1; then
+      while read -r name; do
+        if dpkg -s "$name" >/dev/null 2>&1; then
+          pass "apt package $name is installed"
+        else
+          fail "apt package $name is missing (run: just bootstrap $target)"
+        fi
+      done < <(manifest "$repo_dir/platform/debian/packages")
+    fi
     ;;
   *)
     fail "unknown target $target"

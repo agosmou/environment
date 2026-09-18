@@ -59,7 +59,9 @@ from anywhere. What it is and everything it can do: `docs/tailscale.md`.
 Managed: the install, per OS (`platform/fedora/packages` and the daemon in
 the Fedora bootstrap; the `tailscale-app` cask on the Mac). Not managed: the
 machine's membership in the tailnet, which is a one-time login with your
-account.
+account. On a Debian/Ubuntu server, `platform/debian/packages` and its
+bootstrap install it the same way (Tailscale's apt repository). Hardening
+(ssh, firewall) is the server's own configuration, not this repository.
 
 ### One-time, per machine
 

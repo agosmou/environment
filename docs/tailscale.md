@@ -68,7 +68,7 @@ The feature areas Tailscale documents ([docs index](https://tailscale.com/kb/101
 |---|---|---|
 | Fedora laptop | Tailscale's own dnf repository (`pkgs.tailscale.com/stable/fedora`), which is what [Tailscale's installer](https://tailscale.com/download/linux/fedora) adds on Fedora; Fedora's own package lags a few releases. The bootstrap adds the repo and enables `tailscaled`. | `platform/fedora/packages`, `platform/fedora/bootstrap.sh` |
 | Mac | Homebrew cask `tailscale-app`, which installs the **Standalone** `.pkg` from `pkgs.tailscale.com`, the variant Tailscale "always recommend[s]" ([macOS variants](https://tailscale.com/kb/1065/macos-variants)); it includes the `tailscale` command. | `platform/darwin/Brewfile` |
-| A server managed by Ansible | Tailscale's own apt or dnf repository. | that repository's `tailscale` role |
+| Debian/Ubuntu server | Tailscale's own apt repository, added the way Tailscale's installer does; the bootstrap enables `tailscaled`. | `platform/debian/packages`, `platform/debian/bootstrap.sh` |
 
 Home Manager has no part in it. There is no config file to manage: the
 daemon's state in `/var/lib/tailscale` is the machine's identity and stays on

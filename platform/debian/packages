@@ -1,0 +1,20 @@
+# Debian/Ubuntu packages that need root or a system service. The apt
+# equivalent of platform/fedora/packages, for the Linux server targets.
+#
+# This repository owns the user layer on a server and, through this file,
+# the few root-level packages the environment itself needs. Hardening (ssh,
+# firewall, unattended upgrades) is the server's own configuration, not here.
+#
+# How it is used:
+#   platform/debian/bootstrap.sh  adds vendor repositories, then
+#                                 `sudo apt-get install` on every name here
+#   scripts/doctor                fails if a name here is not installed
+#   scripts/inventory             prints this list
+#
+# Same rules as the Fedora file: one name per line, # comments; add here and
+# `just sync`; remove here, then `sudo apt-get remove <name>` yourself.
+
+# Tailscale. Needs the root daemon tailscaled, so a system package, from
+# Tailscale's own apt repository, which bootstrap adds the way Tailscale's
+# installer does. docs/tailscale.md.
+tailscale

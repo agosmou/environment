@@ -8,8 +8,7 @@ Short list of what is next. Done items are deleted, not ticked.
   the admin console for the Mac mini; disable key expiry on machines you do
   not sit at. Then decide whether Tailscale's Mullvad exit nodes replace the
   standalone Mullvad app (`docs/tailscale.md`, "Mullvad and Tailscale
-  together"). Servers (hagp, the Pi) get Tailscale from `home-infra` when
-  that is set up.
+  together").
 - ty (Astral's Python type checker and language server): still 0.0.x beta as
   of 2026-09. Revisit as a pyrefly replacement once it ships a stable release;
   it is the same authors as uv and ruff.

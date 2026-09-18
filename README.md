@@ -174,6 +174,7 @@ The platform step is the only part that needs root, and it is small:
 | OS | Declared in | Applied by |
 |---|---|---|
 | Fedora | `platform/fedora/packages` (dnf), `platform/fedora/keyd/` | `platform/fedora/bootstrap.sh` |
+| Debian/Ubuntu servers | `platform/debian/packages` (apt) | `platform/debian/bootstrap.sh` |
 | macOS | `platform/darwin/Brewfile` | `platform/darwin/bootstrap.sh` |
 
 Everything else on a machine comes from Home Manager and needs no root.
@@ -208,6 +209,7 @@ Every file in the repository, and what it is for.
 | `platform/fedora/keyd/` | The Caps Lock remap and its systemd unit | `just sync` → bootstrap |
 | `platform/fedora/battery.conf` | Charge limit (80%) as a tmpfiles rule | `just sync` → bootstrap |
 | `platform/fedora/bootstrap.sh` | The Fedora root-level step: vendor repos, dnf, tailscaled, GPU rule, keyd, battery | `just sync` → bootstrap |
+| `platform/debian/packages`, `platform/debian/bootstrap.sh` | The Debian/Ubuntu root-level step for servers: Tailscale's apt repo, apt packages, tailscaled | `just sync` → bootstrap |
 | `platform/darwin/Brewfile` | Homebrew casks: Ghostty, RustDesk, Spotify, Slack, Discord, Obsidian, ChatGPT, Codex, Claude, Docker Desktop, Mullvad, Tailscale. The root-level manifest for the Mac | `just sync` → bootstrap |
 | `platform/darwin/bootstrap.sh` | The macOS root-level step: Homebrew, the Brewfile | `just sync` → bootstrap |
 | `bootstrap` | The one-command machine setup; also the root-level step `sync` runs when `platform/` changed | curl, or `just sync` |

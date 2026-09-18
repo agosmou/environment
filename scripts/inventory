@@ -109,9 +109,13 @@ case "$target" in
     section 'Homebrew (platform/darwin/Brewfile)'
     manifest "$repo_dir/platform/darwin/Brewfile"
     ;;
+  server-*-linux)
+    section 'apt packages (platform/debian/packages), on a Debian/Ubuntu server'
+    manifest "$repo_dir/platform/debian/packages"
+    ;;
   *)
     section 'Root-level packages'
-    printf '(none: server targets are Home Manager only)\n'
+    printf '(none)\n'
     ;;
 esac
 
