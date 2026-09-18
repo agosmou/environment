@@ -100,6 +100,11 @@ in
             set -g @batt_icon_status_charged '󰂄'
             set -g @batt_icon_status_charging '󰂄'
             set -g @batt_icon_status_discharging '󰁾'
+            # Plugged in but held below the charge limit (platform/fedora/
+            # battery.conf): macOS reports "AC attached; not charging", upower
+            # reports "pending-charge", which the plugin only knows as unknown.
+            set -g @batt_icon_status_attached '󰚥'
+            set -g @batt_icon_status_unknown '󰚥'
           '';
         }
         {
@@ -121,6 +126,13 @@ in
       ];
 
       extraConfig = ''
+        # tmux 3.7 draws the command prompt on top of the status line and only
+        # clears it when the style has a fill; tmux-power sets the style
+        # without one, so the window tabs showed through the rename prompt.
+        # Colours are the theme's everforest text and G0 background.
+        set -g message-style 'fg=#a7c080,bg=#262626,fill=#262626'
+        set -g message-command-style 'fg=#a7c080,bg=#262626,fill=#262626'
+
         set -g pane-base-index 1
         set -g renumber-windows on
         set -g set-clipboard on
