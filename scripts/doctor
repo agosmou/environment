@@ -366,22 +366,40 @@ case "$target" in
     ;;
 esac
 
-# Tailscale: installed by the OS (platform/), so the checks are about the
-# machine's state, not the generation. Three stages, and the last is a
-# `look`: logging in is a one-time interactive step with your account
+# Tailscale: installed by the OS, so the checks are about the machine's
+# state, not the generation. Who installs it depends on the machine: the
+# Fedora and macOS platform steps here; on servers the fleet repository
+# (cloud-init at birth), so the hint differs. Three stages, and the third
+# is a `look`: logging in is a one-time interactive step with your account
 # (`sudo tailscale up`), so "not logged in" is a reminder, not breakage.
 #   tailscale status  exits non-zero and prints "Logged out." until the
 #                     machine has joined the tailnet
 if command -v tailscale >/dev/null 2>&1; then
+  case "$target" in
+    server-*) tailscale_fix="fleet's job: see platform/debian/bootstrap.sh" ;;
+    *) tailscale_fix="run: just bootstrap" ;;
+  esac
   if [[ "$(uname -s)" == Linux ]]; then
     if systemctl is-active --quiet tailscaled; then
       pass "tailscaled is running"
     else
-      fail "tailscaled is not running (run: just bootstrap)"
+      fail "tailscaled is not running ($tailscale_fix)"
     fi
   fi
   if tailscale status >/dev/null 2>&1; then
     pass "tailscale is logged in ($(tailscale status --self --peers=false 2>/dev/null | awk 'NR==1{print $2}'))"
+    # Every machine named in ~/.ssh/config (home/ssh/ssh.nix) should be a
+    # peer this machine can name right now. `tailscale ip` resolves a peer
+    # by MagicDNS name through tailscale itself, so this works the same on
+    # Linux and macOS. Offline is a `look`, not a failure: laptops sleep.
+    while read -r host; do
+      [[ "$host" == "*" || "$host" == "$(hostname -s)" ]] && continue
+      if tailscale ip -4 "$host" >/dev/null 2>&1; then
+        pass "ssh host $host is on the tailnet"
+      else
+        look "ssh host $host is not on the tailnet right now (off, or renamed: home/ssh/ssh.nix)"
+      fi
+    done < <(awk '/^Host /{print $2}' "$HOME/.ssh/config" 2>/dev/null)
   else
     look "tailscale is installed but this machine has not joined the tailnet; once: sudo tailscale up"
   fi

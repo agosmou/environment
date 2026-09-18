@@ -2,7 +2,8 @@
 
 A private network between your own machines, over the internet, that behaves
 as if they were all on one LAN. Not a Nix thing: it is a system daemon,
-installed by the OS's package manager and managed in `platform/`.
+installed by the OS's package manager: from `platform/` on the laptop and
+the Mac, from the fleet repository on servers.
 
 Every claim below links to Tailscale's own documentation.
 
@@ -68,7 +69,14 @@ The feature areas Tailscale documents ([docs index](https://tailscale.com/kb/101
 |---|---|---|
 | Fedora laptop | Tailscale's own dnf repository (`pkgs.tailscale.com/stable/fedora`), which is what [Tailscale's installer](https://tailscale.com/download/linux/fedora) adds on Fedora; Fedora's own package lags a few releases. The bootstrap adds the repo and enables `tailscaled`. | `platform/fedora/packages`, `platform/fedora/bootstrap.sh` |
 | Mac | Homebrew cask `tailscale-app`, which installs the **Standalone** `.pkg` from `pkgs.tailscale.com`, the variant Tailscale "always recommend[s]" ([macOS variants](https://tailscale.com/kb/1065/macos-variants)); it includes the `tailscale` command. | `platform/darwin/Brewfile` |
-| Debian/Ubuntu server | Tailscale's own apt repository, added the way Tailscale's installer does; the bootstrap enables `tailscaled`. | `platform/debian/packages`, `platform/debian/bootstrap.sh` |
+| Debian/Ubuntu server | **Not this repository.** The [fleet](https://github.com/agosmou/fleet) repository owns a server's root layer: cloud-init installs Tailscale and joins the tailnet at first boot with a single-use key; ansible checks it stays connected. The platform step here only asserts `tailscaled` is running. | `platform/debian/bootstrap.sh` (assert only) |
+
+The rule behind the split: the tool that had to install Tailscale owns it.
+On the laptop and the Mac nothing but this repository touches root, so it
+installs. On a server nothing can reach the machine before cloud-init has
+joined it to the tailnet, so cloud-init (fleet) installs. In one sentence:
+**environment is what makes a machine mine; fleet is what makes a machine a
+server.**
 
 Home Manager has no part in it. There is no config file to manage: the
 daemon's state in `/var/lib/tailscale` is the machine's identity and stays on
