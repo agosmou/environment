@@ -4,10 +4,13 @@
 # `nix flake check` fails if a change to bootstrap breaks how it decides
 # which machine it is on.
 #
-# Only the --dry-run path is exercised: the script resolves and validates the
-# target, prints it, and exits before installing anything. The
-# ENVIRONMENT_BOOTSTRAP_UNAME_* variables make it believe it is on a
-# different CPU or OS than the one running the test.
+# Two paths are exercised, both of which stop before installing anything:
+#   --dry-run  the script resolves and validates the target and prints it.
+#              ENVIRONMENT_BOOTSTRAP_UNAME_* make it believe it is on a
+#              different CPU or OS than the one running the test.
+#   ENVIRONMENT_BOOTSTRAP_TEST_HOME_FILES
+#              the script runs only its symlink step against a scratch HOME
+#              and a fake generation tree, then exits.
 
 set -euo pipefail
 
@@ -64,4 +67,54 @@ expect_failure riscv64 Linux   server
 expect_failure x86_64  FreeBSD server
 expect_failure x86_64  Linux   unknown
 
-printf 'bootstrap target tests passed: %d\n' "$tests"
+# ---- Symlinks from a previous dotfiles setup --------------------------------
+#
+# Home Manager refuses to replace a symlink, so bootstrap moves foreign ones
+# aside first. Build a scratch HOME that has, in the way of managed files:
+#   ~/.zshrc                  a symlink into ~/dotfiles     -> moved aside
+#   ~/.config/nvim            a symlinked directory         -> moved aside whole
+#   ~/.config/git/config      a symlink into /nix/store     -> left alone
+#   ~/.config/tmux/tmux.conf  a regular file                -> left alone (-b handles it)
+# and a fake generation tree listing those four paths.
+scratch="$(mktemp -d)"
+trap 'rm -rf "$scratch"' EXIT
+home="$scratch/home"
+files="$scratch/home-files"
+mkdir -p "$home/dotfiles/nvim" "$home/.config/git" "$home/.config/tmux" \
+  "$files/.config/nvim" "$files/.config/git" "$files/.config/tmux"
+touch "$home/dotfiles/.zshrc" "$home/dotfiles/nvim/init.lua" "$home/.config/tmux/tmux.conf"
+ln -s "$home/dotfiles/.zshrc" "$home/.zshrc"
+ln -s "$home/dotfiles/nvim" "$home/.config/nvim"
+ln -s /nix/store/0000000000000000000000000000000-home-manager-files/.config/git/config "$home/.config/git/config"
+touch "$files/.zshrc" "$files/.config/nvim/init.lua" "$files/.config/git/config" "$files/.config/tmux/tmux.conf"
+
+HOME="$home" ENVIRONMENT_BOOTSTRAP_TEST_HOME_FILES="$files" bash "$bootstrap" >/dev/null
+
+expect_moved() {
+  [[ -L "$1.pre-home-manager" && ! -e "$1" && ! -L "$1" ]] || {
+    printf 'expected %s to be moved to %s.pre-home-manager\n' "$1" "$1" >&2
+    ls -la "$(dirname "$1")" >&2
+    exit 1
+  }
+  ((tests += 1))
+}
+expect_untouched() {
+  [[ -e "$1" || -L "$1" ]] && [[ ! -e "$1.pre-home-manager" && ! -L "$1.pre-home-manager" ]] || {
+    printf 'expected %s to be left alone\n' "$1" >&2
+    ls -la "$(dirname "$1")" >&2
+    exit 1
+  }
+  ((tests += 1))
+}
+expect_moved "$home/.zshrc"
+expect_moved "$home/.config/nvim"
+expect_untouched "$home/.config/git/config"
+expect_untouched "$home/.config/tmux/tmux.conf"
+# The dotfiles themselves are never touched.
+[[ -f "$home/dotfiles/.zshrc" && -f "$home/dotfiles/nvim/init.lua" ]] || {
+  printf 'dotfiles directory was modified\n' >&2
+  exit 1
+}
+((tests += 1))
+
+printf 'bootstrap tests passed: %d\n' "$tests"

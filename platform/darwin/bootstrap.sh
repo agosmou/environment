@@ -53,8 +53,26 @@ else
   fi
 fi
 
-# Install everything in the Brewfile that is not installed yet.
-"$brew_bin" bundle --file "$repo_dir/platform/darwin/Brewfile"
+# Install everything in the Brewfile that is not installed yet. An app that is
+# already in /Applications from a manual install is adopted rather than
+# reinstalled; adopting changes the bundle's group, which macOS's App
+# Management protection blocks unless the terminal running this has been
+# granted it. That shows up as a flood of "chgrp: ...: Operation not
+# permitted" and a failed install for each such app, with Home Manager
+# already activated and everything else in place. Say so, once, at the end.
+if ! "$brew_bin" bundle --file "$repo_dir/platform/darwin/Brewfile"; then
+  cat >&2 <<'MSG'
+
+brew bundle did not finish. If the errors above are
+    chgrp: /Applications/<App>.app/...: Operation not permitted
+then brew was adopting an app installed by hand and macOS refused to let this
+terminal modify it. Once per machine and terminal:
+    System Settings > Privacy & Security > App Management > enable this terminal
+then run `just bootstrap` again. Home Manager has already activated; only the
+Homebrew step is outstanding.
+MSG
+  exit 1
+fi
 
 printf 'macOS application setup complete for %s.\n' "$target"
 printf 'Grant RustDesk its requested macOS privacy permissions in System Settings.\n'

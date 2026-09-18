@@ -27,7 +27,9 @@
 #      which CPU/OS), or check the one you named.
 #   2. Install Nix if it is missing.
 #   3. Clone this repository into ~/environment if it is not there.
-#   4. Build and activate the Home Manager configuration for the target.
+#   4. Build the Home Manager configuration for the target, move aside any
+#      symlinks from a previous dotfiles setup that would block it, then
+#      activate it.
 #   5. Run the platform script for the OS (platform/fedora, platform/darwin),
 #      which does the few things that need root: system packages, services.
 #
@@ -72,6 +74,47 @@ fail() {
   exit 1
 }
 
+# Move aside symlinks that would stop Home Manager from activating.
+#
+#   move_aside_foreign_symlinks <home-files> <home>
+#
+# <home-files> is the built generation's tree of managed files (one entry
+# per file Home Manager will place, mirroring the home directory). For each,
+# look at the same path under <home> and every directory above it. A
+# symlink there that points outside /nix/store is from a previous setup
+# (Stow, `ln -s ~/dotfiles/...`) and is renamed to <path>.pre-home-manager.
+#
+# Why: `home-manager switch -b` backs up a regular file that is in the way
+# of a managed one, but refuses when the thing in the way is a symlink, and
+# aborts before changing anything. This does for symlinks what -b does for
+# files, using the same suffix, so doctor lists them until they are
+# reconciled. Links into /nix/store are Home Manager's own from an earlier
+# generation and are left for it to update. Parents are checked because a
+# symlinked directory (~/.config/nvim -> ~/dotfiles/nvim) would otherwise
+# have the managed files written into the link's target.
+move_aside_foreign_symlinks() {
+  local home_files="$1"
+  local home="$2"
+  local managed rel path part
+  local -a parts
+
+  [[ -d "$home_files" ]] || return 0
+  while IFS= read -r -d '' managed; do
+    rel="${managed#"$home_files"/}"
+    path="$home"
+    IFS=/ read -r -a parts <<<"$rel"
+    for part in "${parts[@]}"; do
+      path="$path/$part"
+      if [[ -L "$path" && "$(readlink "$path")" != /nix/store/* ]]; then
+        printf 'Moving aside %s -> %s (kept as %s.pre-home-manager)\n' \
+          "$path" "$(readlink "$path")" "$path"
+        mv "$path" "$path.pre-home-manager"
+        break
+      fi
+    done
+  done < <(find "$home_files" \( -type f -o -type l \) -print0)
+}
+
 # Walk the argument list. `shift 2` consumes an option and its value; `shift`
 # consumes a flag with no value. `(($#))` is true while arguments remain.
 while (($#)); do
@@ -110,6 +153,14 @@ while (($#)); do
       ;;
   esac
 done
+
+# Test hook, like the ENVIRONMENT_BOOTSTRAP_UNAME_* overrides below: run only
+# the symlink step against a prepared directory, then stop. Used by
+# tests/bootstrap.sh; never set on a real machine.
+if [[ -n "${ENVIRONMENT_BOOTSTRAP_TEST_HOME_FILES:-}" ]]; then
+  move_aside_foreign_symlinks "$ENVIRONMENT_BOOTSTRAP_TEST_HOME_FILES" "$HOME"
+  exit 0
+fi
 
 [[ -n "$target" ]] || fail 'a target is required'
 
@@ -265,6 +316,15 @@ fi
 # `path:` makes Nix read the directory as-is, including files not yet
 # committed, so a local edit can be activated before it is committed.
 flake_ref="path:$repo_dir"
+
+# Which paths Home Manager manages is known only once the configuration is
+# built, so build the generation first and read its file tree. The switch
+# below reuses the result; nothing is built twice.
+printf 'Building %s...\n' "$target"
+generation="$(nix build --no-link --print-out-paths \
+  "$flake_ref#homeConfigurations.$target.activationPackage")"
+move_aside_foreign_symlinks "$generation/home-files" "$HOME"
+
 printf 'Activating %s...\n' "$target"
 # home-manager comes from this flake's own inputs, so its version is pinned
 # in flake.lock like everything else. `-b pre-home-manager` tells it to

@@ -155,10 +155,14 @@ Home Manager takes over the files it manages and leaves everything else
 alone. There is no merge and no silent overwrite:
 
 - **A file it manages already exists** (`~/.bashrc`, `~/.config/nvim`, a
-  Stow symlink): the original is renamed to `<file>.pre-home-manager` and the
-  managed file takes its place. Nothing from the old file is carried over.
-  `just doctor` lists every such backup and stays red until you have moved
-  what matters into the repository and deleted the backup.
+  Stow or `ln -s ~/dotfiles/...` symlink): the original is renamed to
+  `<file>.pre-home-manager` and the managed file takes its place. Nothing
+  from the old file is carried over. `just doctor` lists every such backup
+  and stays red until you have moved what matters into the repository and
+  deleted the backup. (Home Manager itself only backs up regular files and
+  refuses on symlinks; `bootstrap` moves those aside first, including a
+  symlinked directory such as `~/.config/nvim -> ~/dotfiles/nvim`, so the
+  old dotfiles directory is never written into.)
 - **Programs installed some other way** (`brew`, `dnf`, `apt`, `pip`, things
   in `~/.local/bin`) stay installed. `~/.nix-profile/bin` comes first on PATH,
   so the Nix version of a tool wins when both exist. On Fedora and macOS,
@@ -169,6 +173,22 @@ alone. There is no merge and no silent overwrite:
 So the sequence on an existing machine is: bootstrap, `just doctor`, work
 through what it lists, done.
 
+On a Mac that already had Homebrew, two more things come up, both reported
+by doctor:
+
+- **Command-line tools installed with `brew`** (neovim, git, tmux, uv, ...)
+  are now duplicates: Nix owns the command line here and its copy is first
+  on PATH. Doctor lists everything brew has that is not in the Brewfile;
+  `brew bundle cleanup --force --file platform/darwin/Brewfile` removes it
+  all in one go. Read the list first: anything on it you still want belongs
+  in the repository (`home/`, or the Brewfile for a GUI app), not in brew.
+- **A GUI app that was installed by hand** (dragged to /Applications) and is
+  in the Brewfile is adopted by brew, which changes the bundle's group.
+  macOS's App Management protection blocks that from a terminal that has not
+  been granted it, and the install fails with `chgrp: ... Operation not
+  permitted`. Once per terminal app: System Settings > Privacy & Security >
+  App Management > enable it, then `just bootstrap` again.
+
 The platform step is the only part that needs root, and it is small:
 
 | OS | Declared in | Applied by |
@@ -178,6 +198,9 @@ The platform step is the only part that needs root, and it is small:
 | macOS | `platform/darwin/Brewfile` | `platform/darwin/bootstrap.sh` |
 
 Everything else on a machine comes from Home Manager and needs no root.
+That includes bash 5 on macOS (`home/common.nix`): the scripts in this
+repository need it, Apple ships 3.2, and `#!/usr/bin/env bash` finds the
+Nix one first.
 
 GUI applications come from the most trustworthy build available for the
 platform: Homebrew casks on macOS (they repackage the projects' official
