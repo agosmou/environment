@@ -90,7 +90,7 @@ sync target=target:
 # Apply the repository to this machine (build and activate a new generation)
 apply target=target:
   @[[ -n "{{target}}" ]] || { echo "no target recorded on this machine; pass one: just apply <target>" >&2; exit 1; }
-  nix run "path:{{repo}}#home-manager" -- switch --flake "path:{{repo}}#ag@{{target}}"
+  nix run "path:{{repo}}#home-manager" -- switch --flake "path:{{repo}}#{{target}}"
 
 # Read-only: missing tools, stale symlinks, packages installed by hand
 # outside the manifests.
@@ -113,7 +113,7 @@ inventory target=target:
 # Build a target without activating it (result in ./result)
 build target=target:
   @[[ -n "{{target}}" ]] || { echo "no target recorded on this machine; pass one: just build <target>" >&2; exit 1; }
-  nix build 'path:{{repo}}#homeConfigurations."ag@{{target}}".activationPackage'
+  nix build 'path:{{repo}}#homeConfigurations."{{target}}".activationPackage'
 
 # One step of sync, run when anything under platform/ changed (dnf packages,
 # keyd, Brewfile). Asks for sudo. Run alone to force it.

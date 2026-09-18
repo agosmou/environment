@@ -265,14 +265,14 @@ fi
 # `path:` makes Nix read the directory as-is, including files not yet
 # committed, so a local edit can be activated before it is committed.
 flake_ref="path:$repo_dir"
-printf 'Activating ag@%s...\n' "$target"
+printf 'Activating %s...\n' "$target"
 # home-manager comes from this flake's own inputs, so its version is pinned
 # in flake.lock like everything else. `-b pre-home-manager` tells it to
 # rename any existing dotfile it wants to replace to <file>.pre-home-manager
 # instead of refusing, which is what happens on a machine with a stock
 # ~/.bashrc.
 nix run "$flake_ref#home-manager" -- \
-  -b pre-home-manager switch --flake "$flake_ref#ag@$target"
+  -b pre-home-manager switch --flake "$flake_ref#$target"
 
 # ---- Platform (needs root) --------------------------------------------------
 
@@ -295,7 +295,7 @@ case "$kernel" in
     ;;
 esac
 
-printf 'Environment bootstrap complete: ag@%s\n' "$target"
+printf 'Environment bootstrap complete: %s\n' "$target"
 # Only after the first bootstrap on a machine, when Nix was installed just
 # now: the shell this ran in predates the new ~/.bashrc, so it has no
 # ~/.nix-profile/bin on PATH until a new shell starts. That last step is the

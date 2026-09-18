@@ -153,11 +153,14 @@
           '';
     in
     {
+      # One Home Manager configuration per target, named by the target. The
+      # user on each machine is set inside the target file (home.username);
+      # it is not the same everywhere (ag on Linux, agomez on the Mac).
       homeConfigurations = {
-        "ag@workstation-x86_64-linux" = workstationLinux;
-        "ag@workstation-aarch64-darwin" = workstationDarwin;
-        "ag@server-x86_64-linux" = serverX86Linux;
-        "ag@server-aarch64-linux" = serverArmLinux;
+        "workstation-x86_64-linux" = workstationLinux;
+        "workstation-aarch64-darwin" = workstationDarwin;
+        "server-x86_64-linux" = serverX86Linux;
+        "server-aarch64-linux" = serverArmLinux;
       };
 
       # `nix run .#home-manager` gives the home-manager CLI at the version

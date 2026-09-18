@@ -182,7 +182,7 @@ fi
 # was removed from the target, the apply failed, or PATH is wrong.
 mapfile -t commands < <(
   nix --extra-experimental-features 'nix-command flakes' eval --raw --no-warn-dirty \
-    "path:$repo_dir#homeConfigurations.\"ag@$target\".config.custom.smoke" \
+    "path:$repo_dir#homeConfigurations.\"$target\".config.custom.smoke" \
     --apply 's: builtins.concatStringsSep "\n" (builtins.attrNames s)' 2>/dev/null
 )
 if ((${#commands[@]} == 0)); then
@@ -222,6 +222,14 @@ case "$target" in
     check_command mullvad # Mullvad's package; the daemon is mullvad-daemon
 
     check_dnf_drift
+
+    # The laptop is an SSH destination too (`ssh t14s` from the others);
+    # the Fedora bootstrap enables the service.
+    if systemctl is-active --quiet sshd; then
+      pass "sshd is running"
+    else
+      fail "sshd is not running (run: just bootstrap)"
+    fi
 
     ghostty_config="$HOME/.config/ghostty/config"
     if [[ -L "$ghostty_config" && -e "$ghostty_config" ]]; then
@@ -456,7 +464,7 @@ fi
 # cannot drift from what is installed.
 mapfile -t nvim_tools < <(
   nix --extra-experimental-features 'nix-command flakes' eval --raw --no-warn-dirty \
-    "path:$repo_dir#homeConfigurations.\"ag@$target\".config.custom.neovimTools" \
+    "path:$repo_dir#homeConfigurations.\"$target\".config.custom.neovimTools" \
     --apply 'xs: builtins.concatStringsSep "\n" xs' 2>/dev/null
 )
 if ((${#nvim_tools[@]} == 0)); then

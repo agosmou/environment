@@ -9,9 +9,10 @@
 #   1. add the vendor repositories, then dnf install everything listed in
 #      platform/fedora/packages
 #   2. enable the Tailscale daemon
-#   3. install the tmpfiles rule that lets Nix-built GUI apps find the GPU
-#   4. install the keyd key-remapping daemon as a system service
-#   5. install the battery charge-limit rule
+#   3. enable the SSH server, so other machines can reach this one
+#   4. install the tmpfiles rule that lets Nix-built GUI apps find the GPU
+#   5. install the keyd key-remapping daemon as a system service
+#   6. install the battery charge-limit rule
 #
 # Every step is idempotent: re-running after a package update or a config
 # change refreshes what changed and leaves the rest alone.
@@ -86,7 +87,16 @@ fi
 # deliberately not automated: it needs your account. doctor reminds you.
 sudo systemctl enable --now tailscaled
 
-# ---- 3. GPU access for Nix-built GUI apps -----------------------------------
+# ---- 3. SSH server ------------------------------------------------------------
+
+# So the other machines can `ssh t14s` over the tailnet. Fedora Workstation
+# ships openssh-server but leaves the service off; enabling it is all that
+# is needed, since Fedora Workstation's default firewall zone already allows
+# SSH. Keys only would be stricter (Fedora's default sshd also allows
+# passwords); the laptop's key is put on the others with ssh-copy-id.
+sudo systemctl enable --now sshd
+
+# ---- 4. GPU access for Nix-built GUI apps -----------------------------------
 
 # Nix-built programs look for OpenGL/Vulkan drivers in /run/opengl-driver,
 # a NixOS convention. Fedora keeps its Mesa drivers elsewhere. Home Manager's
@@ -100,7 +110,7 @@ if [[ -x "$gpu_setup" ]]; then
   sudo "$gpu_setup"
 fi
 
-# ---- 4. keyd, the key remapping daemon ---------------------------------------
+# ---- 5. keyd, the key remapping daemon ---------------------------------------
 
 # keyd remaps keys below the desktop (see platform/fedora/keyd/default.conf
 # for what), so it must run as root and as a system service.
@@ -140,7 +150,7 @@ sudo systemctl daemon-reload
 sudo systemctl reset-failed keyd.service
 sudo systemctl enable --now keyd.service
 
-# ---- 5. Battery charge limit -----------------------------------------------
+# ---- 6. Battery charge limit -----------------------------------------------
 
 # A tmpfiles.d rule (platform/fedora/battery.conf) writes the firmware's
 # charge thresholds at boot. `systemd-tmpfiles --create` applies it now too,

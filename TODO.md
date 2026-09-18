@@ -9,6 +9,14 @@ Short list of what is next. Done items are deleted, not ticked.
   not sit at. Then decide whether Tailscale's Mullvad exit nodes replace the
   standalone Mullvad app (`docs/tailscale.md`, "Mullvad and Tailscale
   together").
+- Pi 4: a full `server-aarch64-linux` target (CI already builds and
+  smoke-tests it on an ARM runner). 64-bit Raspberry Pi OS or Ubuntu Server;
+  `platform/debian/` covers Tailscale. Set its user in the target file and
+  add its `Host` entry to `home/ssh/ssh.nix` first (docs/remote-access.md,
+  "Adding a machine").
+- Pi Zero 2 W: 512 MiB of RAM is too little for Home Manager and the editor
+  toolchain. Plan: Tailscale only, via Tailscale's installer, plus a `Host`
+  entry; no target. Revisit only if editing files on it becomes a habit.
 - ty (Astral's Python type checker and language server): still 0.0.x beta as
   of 2026-09. Revisit as a pyrefly replacement once it ships a stable release;
   it is the same authors as uv and ruff.

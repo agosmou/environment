@@ -38,6 +38,8 @@
   custom.fastfetch.greeting = true;
 
   custom.target = "workstation-aarch64-darwin";
-  home.username = "ag";
-  home.homeDirectory = "/Users/ag";
+  # The account on the Mac mini. Home Manager refuses to activate under any
+  # other user, so this must match `whoami` there.
+  home.username = "agomez";
+  home.homeDirectory = "/Users/agomez";
 }

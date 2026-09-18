@@ -39,9 +39,9 @@ fi
 }
 
 # Home Manager configuration attribute for this target, e.g.
-# homeConfigurations."ag@workstation-x86_64-linux". The "path:" prefix makes
+# homeConfigurations."workstation-x86_64-linux". The "path:" prefix makes
 # Nix read the working tree as-is, including files not yet committed to git.
-config="path:$repo_dir#homeConfigurations.\"ag@$target\".config"
+config="path:$repo_dir#homeConfigurations.\"$target\".config"
 
 # Print a section header.
 section() {

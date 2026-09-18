@@ -208,7 +208,7 @@ Every file in the repository, and what it is for.
 | `platform/fedora/baseline` | Packages the Fedora installer marks as user-installed; doctor ignores them when checking for drift | doctor |
 | `platform/fedora/keyd/` | The Caps Lock remap and its systemd unit | `just sync` → bootstrap |
 | `platform/fedora/battery.conf` | Charge limit (80%) as a tmpfiles rule | `just sync` → bootstrap |
-| `platform/fedora/bootstrap.sh` | The Fedora root-level step: vendor repos, dnf, tailscaled, GPU rule, keyd, battery | `just sync` → bootstrap |
+| `platform/fedora/bootstrap.sh` | The Fedora root-level step: vendor repos, dnf, tailscaled, sshd, GPU rule, keyd, battery | `just sync` → bootstrap |
 | `platform/debian/packages`, `platform/debian/bootstrap.sh` | The Debian/Ubuntu root-level step for servers: Tailscale's apt repo, apt packages, tailscaled | `just sync` → bootstrap |
 | `platform/darwin/Brewfile` | Homebrew casks: Ghostty, RustDesk, Spotify, Slack, Discord, Obsidian, ChatGPT, Codex, Claude, Docker Desktop, Mullvad, Tailscale. The root-level manifest for the Mac | `just sync` → bootstrap |
 | `platform/darwin/bootstrap.sh` | The macOS root-level step: Homebrew, the Brewfile | `just sync` → bootstrap |

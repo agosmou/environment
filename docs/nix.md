@@ -44,7 +44,7 @@ file in place, so a failed build leaves the current generation untouched.
 ```bash
 # Build and activate a new generation from this repository (`just apply`).
 # Home Manager's own word for it is "switch", as in switch generations.
-nix run home-manager -- switch --flake .#ag@workstation-x86_64-linux
+nix run home-manager -- switch --flake .#workstation-x86_64-linux
 
 # Every generation, newest last; roll back by activating an older one
 nix run home-manager -- generations
