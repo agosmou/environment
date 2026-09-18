@@ -15,4 +15,12 @@
     go = "go version";
     gopls = "gopls version";
   };
+  # gopls is also Neovim's Go language server, so it is registered here for
+  # doctor's Neovim check (custom.neovimTools). It is declared in THIS file
+  # rather than in home/neovim/default.nix because it is installed with the
+  # Go toolchain, on the shell PATH (it is a command-line tool too: `gopls
+  # check`), and Neovim inherits the shell PATH. The Neovim module's own
+  # extraPackages are the tools that exist only for Neovim, on its private
+  # PATH. Both declarations land in the same list; Nix merges them.
+  custom.neovimTools = [ "gopls" ];
 }

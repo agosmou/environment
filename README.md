@@ -4,6 +4,51 @@ One repository that produces the same working environment on every machine:
 Neovim, tmux, the shell, the terminal, and the tools around them. Linux and
 macOS.
 
+## TL;DR
+
+**Get started** on a machine with nothing on it:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/agosmou/environment/main/bootstrap | bash -s -- --target workstation   # or: server
+exec $SHELL -l
+gh auth login                    # GitHub
+uv python install                # Python, once
+rustup default stable            # Rust, once
+```
+
+plus your git name and email in `~/environment/local/gitconfig.local`, and on
+Fedora a log-out/log-in. `just doctor` tells you what is still missing.
+
+**Maintain**, on every machine:
+
+```bash
+just sync       # pull, apply (or bootstrap when platform/ changed), doctor
+```
+
+**Change something**: edit a file under `home/` or `platform/`, then
+`just check` and `just sync`. **Update everything**: `just update`, `just
+check`, `just sync`, commit `flake.lock`. **Undo**: `just rollback`.
+
+```mermaid
+flowchart LR
+  repo["this repository<br/>home/ · platform/ · targets/"]
+  sync["just sync"]
+  apply["apply<br/>Home Manager builds a generation<br/>no root"]
+  boot["bootstrap<br/>dnf / Homebrew / keyd / GPU rule<br/>sudo"]
+  user["user layer<br/>~/.nix-profile, ~/.config/*<br/>editor, shell, tools, apps"]
+  root["root layer<br/>/etc, /usr/local, system services<br/>Ghostty on Mac, RustDesk, VPNs"]
+  doctor["doctor<br/>machine == repository?"]
+  project["a project's own flake.nix<br/>its tools win inside its directory<br/>(direnv)"]
+
+  repo --> sync
+  sync --> apply --> user
+  sync -->|"platform/ changed"| boot --> root
+  user --> doctor
+  root --> doctor
+  user -. "cd into a project" .-> project
+```
+
+
 ## Why It Is Shaped This Way
 
 The goal is to open any computer and get to work, and never lose a day to a
@@ -66,8 +111,8 @@ and OS (`workstation-x86_64-linux`, `workstation-aarch64-darwin`,
 clones this repository into `~/environment`, activates the target, and runs
 the platform step for the OS.
 
-Then three one-time steps that put your identity on the machine. They are
-deliberately not in the repository, so it can be public.
+Then four one-time steps. The first two put your identity on the machine and
+are deliberately not in the repository, so it can be public.
 
 1. **Log in to GitHub.** Opens a browser, stores a token in
    `~/.config/gh/hosts.yml`:
@@ -86,10 +131,23 @@ deliberately not in the repository, so it can be public.
        email = you@example.com
    ```
 
-3. **Fedora only: log out of GNOME and log back in.** The desktop session
+3. **Download the runtimes the managers own.** Go, bun, and pnpm arrive
+   installed. Python and Rust come through managers (uv, rustup) that
+   download the actual interpreter or toolchain once per machine:
+
+   ```bash
+   uv python install        # the current Python; `uv python install 3.12` for a specific one
+   rustup default stable
+   ```
+
+   `just doctor` reminds you until both are done. See
+   [docs/projects.md](docs/projects.md) for why it is done this way.
+
+4. **Fedora only: log out of GNOME and log back in.** The desktop session
    reads the Nix profile's paths at login, so until you do this, Nix-installed
-   apps (Ghostty, RustDesk) are missing from the app grid and Super-search,
-   even though they run from a terminal. Once, after the first bootstrap.
+   apps (Ghostty, the desktop apps) are missing from the app grid and
+   Super-search, even though they run from a terminal. Once, after the first
+   bootstrap.
 
 ### A machine that already has an environment
 
@@ -137,7 +195,7 @@ Every file in the repository, and what it is for.
 | `targets/<name>/home.nix` | One file per machine type; lists exactly which modules it imports and its per-machine switches | `just sync` |
 | `home/common.nix` | What every target shares: `just`, the recorded target name, the smoke-test registry | `just sync` |
 | `home/shell/` | bash (Linux), zsh (Mac), shared aliases and functions, and one file per command-line tool: atuin, bat, btop, direnv, fastfetch, fzf, starship, zoxide, `tools.nix` for plain binaries | `just sync` |
-| `home/dev/` | Language tooling, global: uv (Python), go, bun, rustup + cargo-nextest (Rust). A project's own flake wins inside its directory | `just sync` |
+| `home/dev/` | Language tooling, global: uv (Python), go + gopls, bun + pnpm, rustup + cargo-nextest, cloudflared + wrangler. A project's own flake wins inside its directory | `just sync` |
 | `home/git/` | git with delta; gh | `just sync` |
 | `home/ssh/` | ssh client config; Keychain on the Mac | `just sync` |
 | `home/neovim/` | Neovim, its language servers, formatters and debuggers, the Lua config, the plugin lock | `just sync` |
@@ -145,12 +203,12 @@ Every file in the repository, and what it is for.
 | `home/terminal/ghostty.nix` | Ghostty: config and font everywhere; the binary too on Fedora (nixpkgs), from Homebrew on the Mac | `just sync` |
 | `home/desktop/` | Needs a screen; workstations only: GNOME settings (`gnome.nix`) and their macOS counterparts (`macos.nix`), Wayland clipboard, the keyd binary, music and chat apps (`apps.nix`) | `just sync` |
 | `home/ai/` | OpenCode, Claude Code, Codex, and `skills/` shared by all three | `just sync` |
-| `platform/fedora/packages` | dnf packages: Nix itself, RustDesk. The root-level manifest for Fedora | `just sync` → bootstrap |
+| `platform/fedora/packages` | dnf packages: Nix itself, RustDesk, ChatGPT/Codex, Mullvad. The root-level manifest for Fedora | `just sync` → bootstrap |
 | `platform/fedora/baseline` | Packages the Fedora installer marks as user-installed; doctor ignores them when checking for drift | doctor |
 | `platform/fedora/keyd/` | The Caps Lock remap and its systemd unit | `just sync` → bootstrap |
 | `platform/fedora/battery.conf` | Charge limit (80%) as a tmpfiles rule | `just sync` → bootstrap |
-| `platform/fedora/bootstrap.sh` | The Fedora root-level step: COPR, dnf, keyd | `just sync` → bootstrap |
-| `platform/darwin/Brewfile` | Homebrew casks: Ghostty, RustDesk, Spotify, Slack, Discord. The root-level manifest for the Mac | `just sync` → bootstrap |
+| `platform/fedora/bootstrap.sh` | The Fedora root-level step: Mullvad's repo, dnf, GPU rule, keyd, battery | `just sync` → bootstrap |
+| `platform/darwin/Brewfile` | Homebrew casks: Ghostty, RustDesk, Spotify, Slack, Discord, Obsidian, ChatGPT, Codex, Claude, Docker Desktop, Mullvad. The root-level manifest for the Mac | `just sync` → bootstrap |
 | `platform/darwin/bootstrap.sh` | The macOS root-level step: Homebrew, the Brewfile | `just sync` → bootstrap |
 | `bootstrap` | The one-command machine setup; also the root-level step `sync` runs when `platform/` changed | curl, or `just sync` |
 | `justfile` | The commands: sync, check, doctor, inventory, rollback, update, and the steps they are made of | `just` |
@@ -250,10 +308,20 @@ just generations     # see them all, newest first
 The repository is unchanged by a rollback. Fix the file, `just check`,
 `just apply` again. See [docs/nix.md](docs/nix.md) for what a generation is.
 
-## Updating Packages
+## Updating
 
-Nothing changes version on its own: `flake.lock` pins the exact nixpkgs and
-Home Manager commits. To move forward:
+Three kinds of thing get updated three ways:
+
+| What | How | Cadence |
+|---|---|---|
+| Everything from Nix (the command-line tools, Neovim and its language servers, Ghostty on Fedora, the desktop apps on Linux) | `just update`, then the steps below | Once a month, or when you want a newer version of something |
+| OS packages and GUI apps from the OS (`platform/`: Fedora's dnf packages, Homebrew casks) | The OS's own updater: `sudo dnf upgrade` on Fedora, `brew upgrade` on the Mac. Not pinned; `just sync` installs what is missing but does not upgrade | Whenever; Fedora also does this through Software |
+| Runtimes that a manager downloads (Python via uv, Rust via rustup) | `uv python install` / `uv python upgrade`; `rustup update` | When a project needs a newer one |
+
+The Nix side is the one with a lock: nothing changes version on its own,
+because `flake.lock` pins the exact nixpkgs and Home Manager commits, so every
+tool is the version nixpkgs-unstable had on the day the lock was written.
+`just check`, CI, and `just rollback` make moving it low-risk:
 
 ```bash
 just update          # rewrite flake.lock to the newest commits

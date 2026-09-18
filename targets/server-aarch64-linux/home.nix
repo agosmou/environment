@@ -7,8 +7,9 @@
     ../../home/ai/codex.nix
     ../../home/ai/opencode.nix
     ../../home/ai/skills
-    ../../home/dev/bun.nix
+    ../../home/dev/cloudflare.nix
     ../../home/dev/go.nix
+    ../../home/dev/js.nix
     ../../home/dev/rust.nix
     ../../home/dev/uv.nix
     ../../home/git/gh.nix

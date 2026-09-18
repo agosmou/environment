@@ -14,6 +14,47 @@ in
 {
   custom.smoke.nvim = "nvim --version";
 
+  # Executables the config expects. Kept next to extraPackages below, which
+  # provide them; doctor verifies each is reachable from inside Neovim.
+  # Package names and executable names differ (delve -> dlv, stdenv.cc -> cc,
+  # vscode-langservers-extracted -> several), which is why this is a list of
+  # executables and not derived from the packages.
+  #
+  # Not every tool Neovim uses is listed here: a tool that is installed for
+  # the shell as well (gopls, with the Go toolchain in home/dev/go.nix) is
+  # registered in its own module, and Nix merges the lists. This list is the
+  # tools that exist only for Neovim, on its private PATH.
+  custom.neovimTools = [
+    # basics the config and plugins shell out to
+    "git"
+    "curl"
+    "tar"
+    "gzip"
+    "unzip"
+    "rg"
+    "fd"
+    "lazygit"
+    # tree-sitter builds syntax parsers with a C compiler
+    "tree-sitter"
+    "cc"
+    # language servers
+    "pyrefly"
+    "lua-language-server"
+    "rust-analyzer"
+    "typescript-language-server"
+    "vscode-eslint-language-server"
+    # formatters and linters
+    "stylua"
+    "ruff"
+    "prettier"
+    "biome"
+    "markdownlint-cli2"
+    "shellcheck"
+    "shfmt"
+    # debug adapters
+    "dlv"
+  ];
+
   programs.neovim = {
     enable = true;
     defaultEditor = true;
@@ -41,6 +82,13 @@ in
       pkgs.lua-language-server
       pkgs.markdownlint-cli2
       pkgs.pyrefly # Python language server and type checker
+      # JavaScript/TypeScript. The language server, plus HTML/CSS/JSON/ESLint
+      # servers; prettier as the fallback formatter and biome for projects that
+      # use it. Linting comes from the project (eslint or biome config).
+      pkgs.typescript-language-server
+      pkgs.vscode-langservers-extracted
+      pkgs.prettier
+      pkgs.biome
       debugPython
       pkgs.ruff
       pkgs.rust-analyzer

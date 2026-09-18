@@ -16,7 +16,8 @@ The **global layer** is `home/dev/`, one file per tool, on every target:
 |---|---|---|
 | uv | Python: `uv init`, `uv add`, `uv run`, `uv python install 3.13` | `~/.local/share/uv/`, per-project `.venv` |
 | go, gopls | `go build/run/test`, the language server | one global version |
-| bun | JS/TS runtime and package manager | one global version |
+| bun, pnpm | JS/TS runtime and package managers | one global version |
+| cloudflared, wrangler | Cloudflare tunnels; Workers dev and deploy | one global version |
 | rustup, cargo-nextest | `cargo`, `rustc`, `clippy`, `rustfmt`; `cargo nextest run` | `~/.rustup/`, per toolchain |
 
 Python type checking is pyrefly, inside Neovim and as `pyrefly check`. With
@@ -28,18 +29,42 @@ a project turns on full checking with two lines in `pyproject.toml`:
 preset = "default"   # or "strict"
 ```
 
+JS/TS in Neovim: the TypeScript language server plus HTML/CSS/JSON/ESLint
+servers attach in any project with a `package.json`. Formatting is biome if
+the project has a `biome.json`, otherwise prettier; linting is whatever the
+project configures (eslint or biome). Nothing global imposes rules on a
+project.
+
 Two of these (uv, rustup) are *managers*: the global thing is the tool, and
 the versions it installs are runtime state on the machine, controlled per
 project by `.python-version` / `pyproject.toml` and `rust-toolchain.toml`.
 The other two are one version each; a project that needs a different one
 pins it in its flake (below).
 
-Once per machine, after the first apply: `rustup default stable`. `doctor`
-reminds you until it is done.
+Once per machine, after the first apply, the two managers need their first
+download; `doctor` reminds you until it is done:
+
+```bash
+uv python install       # the current Python; `uv python install 3.12` for a specific one
+rustup default stable
+```
 
 The **project layer** is a `flake.nix` in the repository. Entering the
 directory puts that flake's tools first on PATH; leaving restores the global
 ones. Nothing to switch by hand.
+
+## Where does a new tool go?
+
+One question: is the tool about **me** or about **a project**?
+
+| The tool is… | It goes in |
+|---|---|
+| Something I use regardless of which repo I am in (`gh`, `uv`, `lazygit`) | `home/dev/` or `home/shell/`, one file; every machine gets it |
+| Only meaningful inside one repo, and its version matters to that repo's contributors (`cargo-vet`, a project's pinned `wrangler`) | That project's `flake.nix`; nothing here |
+| Both: wanted everywhere, and a project may pin its own (`go`, `prettier`) | Here, globally; the project's flake wins inside its directory |
+
+Unsure? `nix run nixpkgs#<tool> -- ...` installs nothing. If you keep typing
+it, it is a "me" tool; if a project's CI needs it, it is a project tool.
 
 ## Entering a project
 

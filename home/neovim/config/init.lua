@@ -631,14 +631,29 @@ do
   ---@type table<string, vim.lsp.Config>
   local servers = {
     -- clangd = {},
-    -- gopls = {},
+    -- Go. gopls is installed by Nix (home/dev/go.nix); Kickstart ships this
+    -- line commented out, which left Go support off. lspconfig root-gates
+    -- it on go.mod.
+    gopls = {},
+    -- NOT rust_analyzer: Rust is handled by rustaceanvim, which starts and
+    -- configures rust-analyzer itself (lua/custom/plugins/rust.lua). Listing
+    -- it here too would start a second, conflicting client.
     -- rust_analyzer = {},
     --
     -- Some languages (like typescript) have entire language plugins that can be useful:
     --    https://github.com/pmizio/typescript-tools.nvim
     --
-    -- But for many setups, the LSP (`ts_ls`) will work just fine
-    -- ts_ls = {},
+    -- JavaScript/TypeScript. ts_ls is the TypeScript language server; Nix
+    -- installs it (home/neovim/default.nix). Root-gated on package.json or
+    -- tsconfig.json by lspconfig, so it stays out of non-JS projects.
+    ts_ls = {},
+    -- Web languages from vscode-langservers-extracted: HTML, CSS, JSON, and
+    -- ESLint. eslint attaches only where the project has an eslint config
+    -- and uses the project's own rules and node_modules/eslint.
+    html = {},
+    cssls = {},
+    jsonls = {},
+    eslint = {},
 
     -- Python language features: completion, go-to-def, hover, type checking.
     -- Pyrefly (Meta; stable 1.0 since May 2026, Rust, no Node inside). Nix
@@ -762,8 +777,16 @@ do
       python = { 'ruff_format' },
       lua = { 'stylua' },
       --
-      -- You can use 'stop_after_first' to run the first available formatter from the list
-      -- javascript = { "prettierd", "prettier", stop_after_first = true },
+      -- JS/TS and web: biome if the project has a biome.json, else prettier.
+      -- Both read the project's own config; prettier is the fallback for
+      -- projects with neither. 'stop_after_first' runs the first available.
+      javascript = { 'biome', 'prettier', stop_after_first = true },
+      typescript = { 'biome', 'prettier', stop_after_first = true },
+      javascriptreact = { 'biome', 'prettier', stop_after_first = true },
+      typescriptreact = { 'biome', 'prettier', stop_after_first = true },
+      json = { 'biome', 'prettier', stop_after_first = true },
+      css = { 'prettier' },
+      html = { 'prettier' },
     },
   }
 

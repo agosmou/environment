@@ -11,8 +11,9 @@
     ../../home/desktop/gnome.nix
     ../../home/desktop/keyd.nix
     ../../home/desktop/wl-clipboard.nix
-    ../../home/dev/bun.nix
+    ../../home/dev/cloudflare.nix
     ../../home/dev/go.nix
+    ../../home/dev/js.nix
     ../../home/dev/rust.nix
     ../../home/dev/uv.nix
     ../../home/git/gh.nix

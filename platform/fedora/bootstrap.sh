@@ -32,6 +32,26 @@ command -v sudo >/dev/null 2>&1 || {
 
 # ---- 1. Root-level packages -------------------------------------------------
 
+# Vendor package repositories.
+#
+# What a repository is: dnf installs packages from a list of sources, one
+# file each under /etc/yum.repos.d/. Fedora's own sources are there from the
+# start. A vendor that hosts its own repository publishes a small .repo file
+# saying where its packages live and which signing key they must carry; add
+# that file once, and from then on the vendor's package installs with
+# `dnf install` and updates with `sudo dnf upgrade` exactly like a Fedora
+# package, with every download checked against the vendor's key.
+#
+# dnf refuses to add a repository whose file already exists, so each one is
+# skipped when its file is present. Re-running is safe.
+
+# Mullvad VPN. Mullvad hosts this repository itself (repository.mullvad.net);
+# the command is the one on its Linux download page:
+# https://mullvad.net/en/download/vpn/linux
+if [[ ! -f /etc/yum.repos.d/mullvad.repo ]]; then
+  sudo dnf config-manager addrepo --from-repofile=https://repository.mullvad.net/rpm/stable/mullvad.repo
+fi
+
 # The list lives in platform/fedora/packages so doctor and inventory can read
 # the same file. `grep -v` drops comment lines and blank lines; `mapfile -t`
 # turns the remaining lines into a bash array, one package per element. A

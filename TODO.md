@@ -7,9 +7,10 @@ Short list of what is next. Done items are deleted, not ticked.
 - Tailscale: `tailscale` in `platform/fedora/packages` and `tailscaled` in the
   Fedora bootstrap, the `tailscale-app` cask, doctor checks, and the
   Tailscale section of `docs/remote-access.md`. Then `sudo tailscale up` on
-  each machine and `Host hagp` in `~/.ssh/config.local`.
-- Cloudflare: decide which product (cloudflared, WARP, or wrangler), then add
-  it.
+  each machine and the server's `Host` entry in `~/.ssh/config.local`. Then
+  decide whether
+  Tailscale's Mullvad exit nodes replace the standalone Mullvad app (see
+  `docs/tailscale.md`, "Mullvad and Tailscale together").
 - ty (Astral's Python type checker and language server): still 0.0.x beta as
   of 2026-09. Revisit as a pyrefly replacement once it ships a stable release;
   it is the same authors as uv and ruff.
@@ -21,6 +22,12 @@ Short list of what is next. Done items are deleted, not ticked.
 - `CONTEXT.md` glossary and one-paragraph ADRs under `docs/adr/`.
 
 ## Explore
+
+- Supply-chain security, per project, when there is a project with
+  dependencies worth auditing: `cargo-deny` and `cargo-audit` as the Rust
+  baseline, `cargo-vet` for reviewed-dependency audits, `osv-scanner` across
+  ecosystems, Trivy for container images. Project flakes and CI, not this
+  repository, unless one turns out to be an everyday tool.
 
 Things to try, not commitments.
 

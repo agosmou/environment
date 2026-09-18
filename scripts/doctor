@@ -74,14 +74,17 @@ check_command() {
 # Print a manifest file (platform/fedora/packages, platform/fedora/baseline)
 # with comment lines and blank lines removed, one entry per line. An entry
 # is a package name or the URL of an rpm; URLs are reduced to the package
-# name, the file name up to its version (rustdesk-1.4.9-0.x86_64.rpm ->
-# rustdesk), so the rest of the script only ever sees names.
+# name so the rest of the script only ever sees names:
+#   rustdesk-1.4.9-0.x86_64.rpm -> rustdesk   (strip .rpm, the arch, then -version)
+#   chatgpt.x86_64.rpm          -> chatgpt    (no version in the file name)
 manifest() {
   local line name
   while read -r line; do
     name="$line"
     if [[ "$line" == http* ]]; then
       name="$(basename "$line")"
+      name="${name%.rpm}"
+      name="${name%.x86_64}"; name="${name%.aarch64}"; name="${name%.noarch}"
       name="${name%%-[0-9]*}"
     fi
     printf '%s\n' "$name"
@@ -214,6 +217,9 @@ case "$target" in
     check_command spotify
     check_command slack
     check_command discord
+    check_command obsidian
+    check_command chatgpt # OpenAI's rpm
+    check_command mullvad # Mullvad's package; the daemon is mullvad-daemon
 
     check_dnf_drift
 
@@ -323,15 +329,34 @@ case "$target" in
     ;;
 esac
 
-# Rust: rustup is installed by Home Manager, but the toolchain itself is
-# something rustup downloads once per machine (home/dev/rust.nix). Until
-# then `cargo` and `rustc` exist as proxies that fail. Not broken, just
-# not done yet, so a look rather than a fail.
+# Runtimes that a manager downloads.
+#
+# Why these checks exist: Rust and Python are not installed by Nix here. Nix
+# installs the MANAGER (rustup, uv; home/dev/), and the manager downloads the
+# actual toolchain or interpreter into the home directory the first time it
+# is asked (`rustup default stable`, `uv python install`). Until that has
+# happened on a machine, `cargo`, `rustc`, and `python` are either missing
+# or are stubs that fail with a confusing error. Nothing is broken, it is a
+# one-time step not yet done, so these are `look`s rather than `fail`s, and
+# each says the command to run.
+#
+# How each check works:
+#   rustup show active-toolchain   exits non-zero until a toolchain is
+#                                  installed and selected as the default
+#   uv python list --only-installed  lists interpreters uv has downloaded;
+#                                    empty output means none yet
 if command -v rustup >/dev/null 2>&1; then
   if rustup show active-toolchain >/dev/null 2>&1; then
     pass "rust toolchain is installed ($(rustup show active-toolchain 2>/dev/null | awk '{print $1}'))"
   else
     look "no rust toolchain installed yet; once per machine: rustup default stable"
+  fi
+fi
+if command -v uv >/dev/null 2>&1; then
+  if uv python list --only-installed 2>/dev/null | grep -q .; then
+    pass "python is installed via uv ($(uv python list --only-installed 2>/dev/null | head -1 | awk '{print $1}'))"
+  else
+    look "no python installed yet; once per machine: uv python install"
   fi
 fi
 
@@ -383,14 +408,29 @@ else
   fail "Neovim configuration symlink is invalid"
 fi
 
-# Two Neovim checks in one headless run: every Lua file under the config
-# parses, and every external tool the config expects (language servers,
-# formatters, debuggers, a C compiler for tree-sitter) is on Neovim's PATH.
-# The editor is the same on every target, servers included: they are dev
-# boxes too.
+# Two Neovim checks in one headless run (Neovim started with no UI, runs
+# the Lua below, quits):
+#   1. every Lua file under the config parses (a syntax error would
+#      otherwise break Neovim's next start)
+#   2. every external program the config expects is on Neovim's PATH; Nix
+#      puts them there via home/neovim/default.nix.
+# The list comes from the flake (custom.neovimTools, declared in
+# home/neovim/default.nix next to the packages that provide it), so it
+# cannot drift from what is installed.
+mapfile -t nvim_tools < <(
+  nix --extra-experimental-features 'nix-command flakes' eval --raw --no-warn-dirty \
+    "path:$repo_dir#homeConfigurations.\"ag@$target\".config.custom.neovimTools" \
+    --apply 'xs: builtins.concatStringsSep "\n" xs' 2>/dev/null
+)
+if ((${#nvim_tools[@]} == 0)); then
+  fail "could not read Neovim's tool list from the flake"
+fi
+# Turn the bash array into the Lua list literal {"git","curl",...}.
+nvim_tools_lua="$(printf '"%s",' "${nvim_tools[@]}")"
+nvim_tools_lua="{${nvim_tools_lua%,}}"
 if nvim --clean --headless -u NONE -i NONE \
   '+lua local root=vim.fn.stdpath("config"); local files=vim.fn.glob(root.."/**/*.lua",false,true); if #files==0 then vim.api.nvim_err_writeln("no Lua files found"); vim.cmd.cquit() end; for _,f in ipairs(files) do local chunk,err=loadfile(f); if not chunk then vim.api.nvim_err_writeln(f..": "..tostring(err)); vim.cmd.cquit() end end' \
-  '+lua for _,x in ipairs({"git","curl","tar","gzip","unzip","rg","fd","lazygit","tree-sitter","cc","pyrefly","lua-language-server","stylua","ruff","markdownlint-cli2","rust-analyzer","dlv","shellcheck","shfmt"}) do if vim.fn.executable(x)~=1 then vim.api.nvim_err_writeln("missing executable: "..x); vim.cmd.cquit() end end' \
+  "+lua for _,x in ipairs($nvim_tools_lua) do if vim.fn.executable(x)~=1 then vim.api.nvim_err_writeln('missing executable: '..x); vim.cmd.cquit() end end" \
   +qa >/dev/null 2>&1
 then
   pass "Neovim Lua and dependencies are valid"

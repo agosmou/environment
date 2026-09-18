@@ -11,10 +11,23 @@
 # .app from upstream. Its config still comes from home/terminal/ghostty.nix.
 cask "ghostty"
 
-# Music and chat. Same three as home/desktop/apps.nix on Linux.
+# Music, chat, notes. Same set as home/desktop/apps.nix on Linux.
 cask "spotify"
 cask "slack"
 cask "discord"
+cask "obsidian"
+
+# AI desktop apps, all official dmgs. On Fedora, ChatGPT/Codex comes from
+# OpenAI's rpm; Claude has no Fedora build yet.
+cask "chatgpt"
+cask "codex"
+cask "claude"
+
+# Containers. Mac only: Fedora ships podman, which does the same job natively.
+cask "docker-desktop"
+
+# VPN. Official dmg; on Fedora it is Mullvad's own dnf repository.
+cask "mullvad-vpn"
 
 # Remote desktop. nixpkgs marks RustDesk unsupported on Apple Silicon.
 # After install, grant its macOS permissions: docs/remote-access.md.

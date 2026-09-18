@@ -31,3 +31,13 @@ nix-daemon
 # docs list first for Fedora. A URL line is installed with dnf like a name;
 # bump the version here to update. https://rustdesk.com/docs/en/client/linux/
 https://github.com/rustdesk/rustdesk/releases/download/1.4.9/rustdesk-1.4.9-0.x86_64.rpm
+
+# ChatGPT desktop (ChatGPT + Work + Codex in one app; Linux preview, Fedora
+# supported). OpenAI's own rpm, package name `chatgpt`. OpenAI publishes only
+# a "latest" URL, so unlike RustDesk this is not version-pinned: a bootstrap
+# run installs whatever is current. https://openai.com/codex/
+https://persistent.oaistatic.com/codex-app-prod/linux/rpm/latest/chatgpt.x86_64.rpm
+
+# Mullvad VPN. Needs a root daemon, so it is a system package: Mullvad's own
+# dnf repository, which bootstrap adds. https://mullvad.net/en/download/vpn/linux
+mullvad-vpn

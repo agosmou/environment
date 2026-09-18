@@ -22,6 +22,17 @@
   # each CPU/OS, and `doctor` checks every name is on PATH. So a tool is
   # tested by the one line in its own file, and there is no list elsewhere
   # to keep in sync.
+  # Programs Neovim's config expects on its PATH (language servers,
+  # formatters, debug adapters). The Neovim module lists them next to the
+  # packages that provide them; doctor asks the flake and checks each one
+  # is executable from inside Neovim. Same idea as custom.smoke: declared
+  # where installed, no list elsewhere to keep in sync.
+  options.custom.neovimTools = lib.mkOption {
+    type = lib.types.listOf lib.types.str;
+    default = [ ];
+    description = "executables Neovim's config expects on its PATH";
+  };
+
   options.custom.smoke = lib.mkOption {
     type = lib.types.attrsOf lib.types.str;
     default = { };
