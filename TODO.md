@@ -4,13 +4,12 @@ Short list of what is next. Done items are deleted, not ticked.
 
 ## Next
 
-- Tailscale: `tailscale` in `platform/fedora/packages` and `tailscaled` in the
-  Fedora bootstrap, the `tailscale-app` cask, doctor checks, and the
-  Tailscale section of `docs/remote-access.md`. Then `sudo tailscale up` on
-  each machine and the server's `Host` entry in `~/.ssh/config.local`. Then
-  decide whether
-  Tailscale's Mullvad exit nodes replace the standalone Mullvad app (see
-  `docs/tailscale.md`, "Mullvad and Tailscale together").
+- Tailscale, after the install lands: `sudo tailscale up` on the laptop; check
+  the admin console for the Mac mini; disable key expiry on machines you do
+  not sit at. Then decide whether Tailscale's Mullvad exit nodes replace the
+  standalone Mullvad app (`docs/tailscale.md`, "Mullvad and Tailscale
+  together"). Servers (hagp, the Pi) get Tailscale from `home-infra` when
+  that is set up.
 - ty (Astral's Python type checker and language server): still 0.0.x beta as
   of 2026-09. Revisit as a pyrefly replacement once it ships a stable release;
   it is the same authors as uv and ruff.

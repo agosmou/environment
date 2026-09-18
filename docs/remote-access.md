@@ -53,7 +53,46 @@ settings). Across networks, the plan is Tailscale: see below.
 
 ## Tailscale
 
-Not set up yet. When it is, this section covers `tailscale up` on each
-machine, `tailscale ping <name>` to verify, and connecting RustDesk to the
-other machine's Tailscale IP so remote-desktop traffic never leaves the
-private network.
+The private network that makes SSH and RustDesk work between the machines
+from anywhere. What it is and everything it can do: `docs/tailscale.md`.
+
+Managed: the install, per OS (`platform/fedora/packages` and the daemon in
+the Fedora bootstrap; the `tailscale-app` cask on the Mac). Not managed: the
+machine's membership in the tailnet, which is a one-time login with your
+account.
+
+### One-time, per machine
+
+1. Join the tailnet. Linux: `sudo tailscale up` prints a URL; open it and log
+   in with the account the tailnet belongs to. Mac: log in from the Tailscale
+   menu-bar app. `tailscale up` is "Connect your device to Tailscale and
+   authenticate if needed" ([CLI reference](https://tailscale.com/kb/1080/cli)).
+2. For a machine you reach but rarely sit at (a server, the Mac mini):
+   disable key expiry, or it silently drops off the tailnet after 180 days.
+   Admin console → Machines → the machine's menu → **Disable key expiry**.
+   Tailscale recommends this for "trusted servers ... that are hard to reach"
+   ([key expiry](https://tailscale.com/kb/1028/key-expiry)).
+3. To SSH *into* a Mac, macOS must allow it: System Settings → General →
+   Sharing → Remote Login, on ([Apple](https://support.apple.com/guide/mac-help/allow-a-remote-computer-to-access-your-mac-mchlp1066/mac)).
+
+The tailnet is administered in a browser at <https://login.tailscale.com/admin>:
+the machines list, names, key expiry, the policy file.
+
+### Every day
+
+```bash
+tailscale status          # every machine; "direct" or "relay" per peer
+tailscale ping <name>     # confirm a path to a machine
+ssh <name>                # MagicDNS: the machine's hostname is its name
+tailscale ip -4 <name>    # its 100.x.y.z address, for RustDesk
+```
+
+### RustDesk over Tailscale
+
+RustDesk's "direct IP access" connects to an IP instead of an ID, for any
+machine you have network access to; Tailscale is that network access. On the
+machine to be controlled: Settings → Security → **Enable direct IP access**,
+apply (it listens on port 21118)
+([RustDesk](https://github.com/rustdesk/rustdesk/discussions/8654)). On the
+controlling machine, enter the other's Tailscale IP (`tailscale ip -4 <name>`)
+in place of an ID. Traffic stays on the tailnet.

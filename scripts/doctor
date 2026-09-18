@@ -311,6 +311,12 @@ case "$target" in
       fail "RustDesk application is missing"
     fi
 
+    if [[ -d /Applications/Tailscale.app ]]; then
+      pass "Tailscale application is installed"
+    else
+      fail "Tailscale application is missing"
+    fi
+
     check_brew_drift
 
     ghostty_config="$HOME/.config/ghostty/config"
@@ -328,6 +334,27 @@ case "$target" in
     fail "unknown target $target"
     ;;
 esac
+
+# Tailscale: installed by the OS (platform/), so the checks are about the
+# machine's state, not the generation. Three stages, and the last is a
+# `look`: logging in is a one-time interactive step with your account
+# (`sudo tailscale up`), so "not logged in" is a reminder, not breakage.
+#   tailscale status  exits non-zero and prints "Logged out." until the
+#                     machine has joined the tailnet
+if command -v tailscale >/dev/null 2>&1; then
+  if [[ "$(uname -s)" == Linux ]]; then
+    if systemctl is-active --quiet tailscaled; then
+      pass "tailscaled is running"
+    else
+      fail "tailscaled is not running (run: just bootstrap)"
+    fi
+  fi
+  if tailscale status >/dev/null 2>&1; then
+    pass "tailscale is logged in ($(tailscale status --self --peers=false 2>/dev/null | awk 'NR==1{print $2}'))"
+  else
+    look "tailscale is installed but this machine has not joined the tailnet; once: sudo tailscale up"
+  fi
+fi
 
 # Runtimes that a manager downloads.
 #

@@ -203,12 +203,12 @@ Every file in the repository, and what it is for.
 | `home/terminal/ghostty.nix` | Ghostty: config and font everywhere; the binary too on Fedora (nixpkgs), from Homebrew on the Mac | `just sync` |
 | `home/desktop/` | Needs a screen; workstations only: GNOME settings (`gnome.nix`) and their macOS counterparts (`macos.nix`), Wayland clipboard, the keyd binary, music and chat apps (`apps.nix`) | `just sync` |
 | `home/ai/` | OpenCode, Claude Code, Codex, and `skills/` shared by all three | `just sync` |
-| `platform/fedora/packages` | dnf packages: Nix itself, RustDesk, ChatGPT/Codex, Mullvad. The root-level manifest for Fedora | `just sync` → bootstrap |
+| `platform/fedora/packages` | dnf packages: Nix itself, RustDesk, ChatGPT/Codex, Mullvad, Tailscale. The root-level manifest for Fedora | `just sync` → bootstrap |
 | `platform/fedora/baseline` | Packages the Fedora installer marks as user-installed; doctor ignores them when checking for drift | doctor |
 | `platform/fedora/keyd/` | The Caps Lock remap and its systemd unit | `just sync` → bootstrap |
 | `platform/fedora/battery.conf` | Charge limit (80%) as a tmpfiles rule | `just sync` → bootstrap |
-| `platform/fedora/bootstrap.sh` | The Fedora root-level step: Mullvad's repo, dnf, GPU rule, keyd, battery | `just sync` → bootstrap |
-| `platform/darwin/Brewfile` | Homebrew casks: Ghostty, RustDesk, Spotify, Slack, Discord, Obsidian, ChatGPT, Codex, Claude, Docker Desktop, Mullvad. The root-level manifest for the Mac | `just sync` → bootstrap |
+| `platform/fedora/bootstrap.sh` | The Fedora root-level step: vendor repos, dnf, tailscaled, GPU rule, keyd, battery | `just sync` → bootstrap |
+| `platform/darwin/Brewfile` | Homebrew casks: Ghostty, RustDesk, Spotify, Slack, Discord, Obsidian, ChatGPT, Codex, Claude, Docker Desktop, Mullvad, Tailscale. The root-level manifest for the Mac | `just sync` → bootstrap |
 | `platform/darwin/bootstrap.sh` | The macOS root-level step: Homebrew, the Brewfile | `just sync` → bootstrap |
 | `bootstrap` | The one-command machine setup; also the root-level step `sync` runs when `platform/` changed | curl, or `just sync` |
 | `justfile` | The commands: sync, check, doctor, inventory, rollback, update, and the steps they are made of | `just` |
@@ -374,8 +374,10 @@ Homebrew do not, so doctor lists the leftovers until you remove them.
 - [docs/nix.md](docs/nix.md): where Nix puts things, how generations and
   rollback work, what a flake is and why the "experimental" features are on,
   and where the config files under `~/.config` come from.
-- [docs/remote-access.md](docs/remote-access.md): SSH and RustDesk between
-  the machines, including the one-time macOS permission setup.
+- [docs/remote-access.md](docs/remote-access.md): SSH, RustDesk, and
+  Tailscale between the machines, including the one-time steps per machine.
+- [docs/tailscale.md](docs/tailscale.md): what Tailscale is, how it works,
+  and everything it can do, with Tailscale's own docs for each claim.
 - [docs/neovim.md](docs/neovim.md): how the editor config is laid out, how to
   add a plugin or language server, and the keys added on top of Kickstart.
 - [docs/tmux.md](docs/tmux.md): keys and behaviour.

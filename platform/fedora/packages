@@ -41,3 +41,9 @@ https://persistent.oaistatic.com/codex-app-prod/linux/rpm/latest/chatgpt.x86_64.
 # Mullvad VPN. Needs a root daemon, so it is a system package: Mullvad's own
 # dnf repository, which bootstrap adds. https://mullvad.net/en/download/vpn/linux
 mullvad-vpn
+
+# Tailscale. Needs the root daemon tailscaled, so a system package, from
+# Tailscale's own dnf repository, which bootstrap adds and which is what
+# Tailscale's installer (https://tailscale.com/install.sh) uses on Fedora.
+# Fedora's own package exists but lags several releases. docs/tailscale.md.
+tailscale

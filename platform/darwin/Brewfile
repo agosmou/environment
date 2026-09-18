@@ -29,6 +29,11 @@ cask "docker-desktop"
 # VPN. Official dmg; on Fedora it is Mullvad's own dnf repository.
 cask "mullvad-vpn"
 
+# Tailscale: the "Standalone" variant (a .pkg from pkgs.tailscale.com), which
+# Tailscale recommends over the App Store one; menu-bar app plus the
+# `tailscale` command. https://tailscale.com/kb/1065/macos-variants
+cask "tailscale-app"
+
 # Remote desktop. nixpkgs marks RustDesk unsupported on Apple Silicon.
 # After install, grant its macOS permissions: docs/remote-access.md.
 cask "rustdesk"

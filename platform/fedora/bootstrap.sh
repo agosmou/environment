@@ -6,10 +6,12 @@
 #   platform/fedora/bootstrap.sh <repo-dir> <target>
 #
 # What it does:
-#   1. dnf install everything listed in platform/fedora/packages
-#   2. install the tmpfiles rule that lets Nix-built GUI apps find the GPU
-#   3. install the keyd key-remapping daemon as a system service
-#   4. install the battery charge-limit rule
+#   1. add the vendor repositories, then dnf install everything listed in
+#      platform/fedora/packages
+#   2. enable the Tailscale daemon
+#   3. install the tmpfiles rule that lets Nix-built GUI apps find the GPU
+#   4. install the keyd key-remapping daemon as a system service
+#   5. install the battery charge-limit rule
 #
 # Every step is idempotent: re-running after a package update or a config
 # change refreshes what changed and leaves the rest alone.
@@ -52,6 +54,18 @@ if [[ ! -f /etc/yum.repos.d/mullvad.repo ]]; then
   sudo dnf config-manager addrepo --from-repofile=https://repository.mullvad.net/rpm/stable/mullvad.repo
 fi
 
+# Tailscale. Tailscale hosts this repository itself (pkgs.tailscale.com); the
+# .repo file carries its signing key (gpgcheck=1). This is exactly what
+# Tailscale's own installer does on Fedora with dnf 5:
+#   dnf config-manager addrepo --from-repofile=https://pkgs.tailscale.com/stable/fedora/tailscale.repo
+#   dnf install tailscale
+#   systemctl enable --now tailscaled
+# (https://tailscale.com/install.sh, the dnf branch). The install happens
+# with the manifest below; the daemon is enabled after it.
+if [[ ! -f /etc/yum.repos.d/tailscale.repo ]]; then
+  sudo dnf config-manager addrepo --from-repofile=https://pkgs.tailscale.com/stable/fedora/tailscale.repo
+fi
+
 # The list lives in platform/fedora/packages so doctor and inventory can read
 # the same file. `grep -v` drops comment lines and blank lines; `mapfile -t`
 # turns the remaining lines into a bash array, one package per element. A
@@ -64,7 +78,15 @@ if ((${#packages[@]} > 0)); then
   sudo dnf install -y "${packages[@]}"
 fi
 
-# ---- 2. GPU access for Nix-built GUI apps -----------------------------------
+# ---- 2. Tailscale daemon ------------------------------------------------------
+
+# The package installs tailscaled but does not start it; Tailscale's installer
+# ends with this same line. Logging the machine in to the tailnet is a
+# separate, one-time, interactive step (`sudo tailscale up` opens a browser),
+# deliberately not automated: it needs your account. doctor reminds you.
+sudo systemctl enable --now tailscaled
+
+# ---- 3. GPU access for Nix-built GUI apps -----------------------------------
 
 # Nix-built programs look for OpenGL/Vulkan drivers in /run/opengl-driver,
 # a NixOS convention. Fedora keeps its Mesa drivers elsewhere. Home Manager's
@@ -78,7 +100,7 @@ if [[ -x "$gpu_setup" ]]; then
   sudo "$gpu_setup"
 fi
 
-# ---- 3. keyd, the key remapping daemon ---------------------------------------
+# ---- 4. keyd, the key remapping daemon ---------------------------------------
 
 # keyd remaps keys below the desktop (see platform/fedora/keyd/default.conf
 # for what), so it must run as root and as a system service.
@@ -118,7 +140,7 @@ sudo systemctl daemon-reload
 sudo systemctl reset-failed keyd.service
 sudo systemctl enable --now keyd.service
 
-# ---- 4. Battery charge limit -----------------------------------------------
+# ---- 5. Battery charge limit -----------------------------------------------
 
 # A tmpfiles.d rule (platform/fedora/battery.conf) writes the firmware's
 # charge thresholds at boot. `systemd-tmpfiles --create` applies it now too,
