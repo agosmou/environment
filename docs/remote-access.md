@@ -16,8 +16,8 @@ a reinstall or a change of job; a second laptop gets its own model name.
 
 Not managed, per machine:
 
-- Anything else about hosts (LAN addresses, jump hosts, key paths):
-  `~/.ssh/config.local`, which the managed config includes.
+- Anything else about hosts (LAN addresses, jump hosts, key paths, port
+  forwards): `~/.ssh/config.local`, which the managed config includes.
 - Keys themselves. Generate on the machine; never in the repository.
 - The SSH *server* on a machine you connect to. On Fedora the bootstrap
   enables `sshd`. On macOS: System Settings → General → Sharing → Remote
@@ -168,6 +168,7 @@ tailscale ip -4 <name>    # its 100.x.y.z address, for RustDesk
 | `Connection refused` | Nothing is listening on port 22: the SSH server is off | Mac: Remote Login on. Fedora: `just sync` (bootstrap enables sshd). Debian/Ubuntu server: `sudo apt-get install openssh-server` |
 | `Connection closed by <ip> port 22` | The server answered and rejected the user before authentication: that account does not exist there, or Remote Login is limited to other users | Use the account that exists (`whoami` on the machine); check Remote Login's "Allow access for" |
 | `Permission denied (publickey,...)` | Right user, but this machine's key is not in its `authorized_keys` | `ssh-copy-id <name>` once |
+| `missing or unsuitable terminal: xterm-ghostty` (from tmux, after ssh succeeded) | The server has no terminfo for Ghostty's `TERM` | `docs/remote-dev.md`, "The terminal" |
 
 ### RustDesk over Tailscale
 

@@ -87,6 +87,7 @@ The daily loop is therefore: **edit, check, sync.**
 | Add a command-line tool | a file under `home/shell/`, its import in `targets/`, `just sync` |
 | Add a GUI app | `platform/fedora/packages` (Fedora) or `platform/darwin/Brewfile` (Mac), `just sync` |
 | Start or enter a project with its own tools | see [docs/projects.md](docs/projects.md) |
+| Work on a server and see its dev server in my browser | see [docs/remote-dev.md](docs/remote-dev.md) |
 | Update every package | `just update`, `just check`, `just sync`, commit `flake.lock` |
 
 ## New Machine
@@ -241,7 +242,7 @@ Every file in the repository, and what it is for.
 | `scripts/inventory` | Prints everything a target declares; read-only | `just inventory` |
 | `tests/bootstrap.sh` | Target-detection tests for `bootstrap` | `just check` |
 | `.github/workflows/check.yml` | CI: `nix flake check` on x86 Linux, ARM Linux, Apple Silicon, from a clean clone | push |
-| `docs/` | `nix.md` (how Nix works here, flakes, GUI apps), `neovim.md`, `tmux.md`, `remote-access.md` | — |
+| `docs/` | `nix.md` (how Nix works here, flakes, GUI apps), `neovim.md`, `tmux.md`, `remote-access.md`, `remote-dev.md` | — |
 
 ## Adding A Target
 
@@ -403,6 +404,8 @@ Homebrew do not, so doctor lists the leftovers until you remove them.
   Tailscale between the machines, including the one-time steps per machine.
 - [docs/tailscale.md](docs/tailscale.md): what Tailscale is, how it works,
   and everything it can do, with Tailscale's own docs for each claim.
+- [docs/remote-dev.md](docs/remote-dev.md): editing and running code on a
+  server, and the three ways to see its dev server in the laptop's browser.
 - [docs/neovim.md](docs/neovim.md): how the editor config is laid out, how to
   add a plugin or language server, and the keys added on top of Kickstart.
 - [docs/tmux.md](docs/tmux.md): keys and behaviour.

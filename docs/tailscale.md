@@ -59,7 +59,8 @@ The feature areas Tailscale documents ([docs index](https://tailscale.com/kb/101
    anywhere, by its Tailscale IP.
 3. **A dev server, from any device.** A service on `<server>:3000` is
    reachable from every machine on the tailnet, including a phone; or
-   `tailscale serve` gives it an HTTPS URL.
+   `tailscale serve` gives it an HTTPS URL. How, and when to use `ssh -L`
+   instead: `docs/remote-dev.md`.
 4. **Exit nodes.** Route a machine's internet traffic through another of your
    machines, or through a Mullvad location via the add-on.
 
