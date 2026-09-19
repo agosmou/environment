@@ -242,7 +242,7 @@ Every file in the repository, and what it is for.
 | `scripts/inventory` | Prints everything a target declares; read-only | `just inventory` |
 | `tests/bootstrap.sh` | Target-detection tests for `bootstrap` | `just check` |
 | `.github/workflows/check.yml` | CI: `nix flake check` on x86 Linux, ARM Linux, Apple Silicon, from a clean clone | push |
-| `docs/` | `nix.md` (how Nix works here, flakes, GUI apps), `neovim.md`, `tmux.md`, `remote-access.md`, `remote-dev.md` | — |
+| `docs/` | `nix.md` (how Nix works here, flakes, GUI apps), `neovim.md`, `tmux.md`, `remote-access.md`, `remote-dev.md`, `containers.md` | — |
 
 ## Adding A Target
 
@@ -409,5 +409,8 @@ Homebrew do not, so doctor lists the leftovers until you remove them.
 - [docs/neovim.md](docs/neovim.md): how the editor config is laid out, how to
   add a plugin or language server, and the keys added on top of Kickstart.
 - [docs/tmux.md](docs/tmux.md): keys and behaviour.
+- [docs/containers.md](docs/containers.md): which machine runs Docker or
+  podman and why, the port rule on servers, and the steps to put Docker
+  on the Fedora laptop when wanted.
 - [docs/projects.md](docs/projects.md): global language tools versus a
   project's own flake, direnv, and a template for starting a project.

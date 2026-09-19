@@ -65,4 +65,15 @@ MSG
   exit 1
 fi
 
+# ---- 3. Docker: report, do not install ---------------------------------------
+
+# Same owner as Tailscale: fleet (roles/docker, group `containers`). Not
+# every server runs containers, so a missing docker is information, not a
+# failure. docs/containers.md.
+if command -v docker >/dev/null 2>&1; then
+  printf 'docker is present (fleet, roles/docker).\n'
+else
+  printf 'docker is not installed. Wanted here? Add the host to the fleet inventory group containers, then: just apply -l %s\n' "$(hostname)"
+fi
+
 printf 'Debian/Ubuntu platform setup complete.\n'

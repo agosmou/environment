@@ -61,3 +61,12 @@ tailscale
 # unused, list `wireshark-cli` here instead and `sudo dnf remove wireshark`.
 nmap
 wireshark
+
+# Containers: podman, Fedora's own, already on the machine because Fedora
+# Workstation's toolbox pulls it in. Listed so the choice is written down
+# rather than an accident of the install. No `docker` command here today;
+# the servers run Docker CE (fleet, roles/docker) and the Mac Docker
+# Desktop. If that changes, docs/containers.md has the switch step by step.
+# Never `podman-docker`: it takes /usr/bin/docker and conflicts with every
+# real Docker package.
+podman

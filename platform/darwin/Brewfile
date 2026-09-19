@@ -23,7 +23,8 @@ cask "chatgpt"
 cask "codex"
 cask "claude"
 
-# Containers. Mac only: Fedora ships podman, which does the same job natively.
+# Containers. Mac only; Fedora has podman and the servers Docker CE from
+# fleet. docs/containers.md says who has what and how to change it.
 cask "docker-desktop"
 
 # VPN. Official dmg; on Fedora it is Mullvad's own dnf repository.
