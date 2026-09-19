@@ -13,6 +13,7 @@
 #   4. install the tmpfiles rule that lets Nix-built GUI apps find the GPU
 #   5. install the keyd key-remapping daemon as a system service
 #   6. install the battery charge-limit rule
+#   7. add the user to the wireshark group, for packet capture without root
 #
 # Every step is idempotent: re-running after a package update or a config
 # change refreshes what changed and leaves the rest alone.
@@ -158,5 +159,16 @@ sudo systemctl enable --now keyd.service
 # the rule's paths are missing and tmpfiles skips them with a warning.
 sudo install -m 0644 "$repo_dir/platform/fedora/battery.conf" /etc/tmpfiles.d/environment-battery.conf
 sudo systemd-tmpfiles --create /etc/tmpfiles.d/environment-battery.conf || true
+
+# ---- 7. Packet capture without root ------------------------------------------
+
+# Fedora's wireshark package gives dumpcap the capabilities to open raw
+# sockets and restricts it to the `wireshark` group, so members capture as
+# themselves and the GUI never runs as root. Group membership is read at
+# login: log out and in once after the first run for it to take effect.
+if ! id -nG "$USER" | tr ' ' '\n' | grep -qx wireshark; then
+  sudo usermod -aG wireshark "$USER"
+  printf 'Added %s to the wireshark group; log out and in for it to apply.\n' "$USER"
+fi
 
 printf 'Fedora platform setup complete.\n'

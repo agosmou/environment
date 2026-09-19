@@ -47,3 +47,17 @@ mullvad-vpn
 # Tailscale's installer (https://tailscale.com/install.sh) uses on Fedora.
 # Fedora's own package exists but lags several releases. docs/tailscale.md.
 tailscale
+
+# Network inspection: nmap (who is on the LAN, what ports they expose) and
+# Wireshark (packet capture and analysis; tcpdump is in Fedora's base
+# install already). System packages rather than Home Manager because both
+# need raw sockets: sudo drops ~/.nix-profile/bin from PATH, and Fedora's
+# wireshark ships dumpcap with file capabilities plus a `wireshark` group so
+# you capture as yourself and the GUI never runs as root (bootstrap adds
+# you to the group; log out and in once after). Only scan networks you own.
+#
+# `wireshark` is the GUI and pulls in `wireshark-cli` (tshark, the same
+# dissectors from the terminal, and dumpcap). If the GUI turns out to go
+# unused, list `wireshark-cli` here instead and `sudo dnf remove wireshark`.
+nmap
+wireshark

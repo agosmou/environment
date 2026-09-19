@@ -37,3 +37,11 @@ cask "tailscale-app"
 # Remote desktop. nixpkgs marks RustDesk unsupported on Apple Silicon.
 # After install, grant its macOS permissions: docs/remote-access.md.
 cask "rustdesk"
+
+# Network inspection, matching platform/fedora/packages. nmap needs sudo for
+# LAN discovery and SYN scans, and sudo does not see ~/.nix-profile/bin, so
+# it comes from brew. The Wireshark cask is the upstream .app; its ChmodBPF
+# helper lets you capture without root, the macOS equivalent of Fedora's
+# wireshark group. tcpdump ships with macOS.
+brew "nmap"
+cask "wireshark-app"
