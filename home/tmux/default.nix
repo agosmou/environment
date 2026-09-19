@@ -178,7 +178,11 @@ in
         bind-key -T copy-mode-vi TripleClick1Pane send-keys -X select-line \; send-keys -X copy-selection-and-cancel
         bind-key -T root DoubleClick1Pane select-pane -t = \; if-shell -F '#{||:#{pane_in_mode},#{mouse_any_flag}}' 'send-keys -M' 'copy-mode -H ; send-keys -X select-word ; run-shell -d 0.3 ; send-keys -X copy-selection-and-cancel'
         bind-key -T root TripleClick1Pane select-pane -t = \; if-shell -F '#{||:#{pane_in_mode},#{mouse_any_flag}}' 'send-keys -M' 'copy-mode -H ; send-keys -X select-line ; run-shell -d 0.3 ; send-keys -X copy-selection-and-cancel'
-        bind-key -T copy-mode-vi MouseDown1Pane send-keys -X cancel
+        # A press starts a possible drag, so it must not leave copy mode; a
+        # release with no drag (MouseUp, never sent after a drag) is the
+        # single click that jumps back to the prompt.
+        bind-key -T copy-mode-vi MouseDown1Pane select-pane \; send-keys -X clear-selection
+        bind-key -T copy-mode-vi MouseUp1Pane send-keys -X cancel
         bind-key -T copy-mode-vi WheelDownPane send-keys -X -N 3 scroll-down \; if-shell -F '#{==:#{scroll_position},0}' 'send-keys -X cancel'
         set-hook -g after-select-window 'if-shell -F "#{pane_in_mode}" "send-keys -X cancel"'
       '';
