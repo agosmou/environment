@@ -10,6 +10,7 @@
     ../../home/dev/cloudflare.nix
     ../../home/dev/go.nix
     ../../home/dev/js.nix
+    ../../home/dev/postgres.nix
     ../../home/dev/rust.nix
     ../../home/dev/uv.nix
     ../../home/git/gh.nix
