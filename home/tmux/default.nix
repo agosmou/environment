@@ -173,7 +173,9 @@ in
 
         bind-key -T copy-mode-vi v send-keys -X begin-selection
         bind-key -T copy-mode-vi y send-keys -X copy-selection-and-cancel
-        bind-key -T copy-mode-vi MouseDragEnd1Pane send-keys -X copy-selection-and-cancel
+        # Dragging copies and stays where you are; on the live screen (not
+        # scrolled up) it drops back to the prompt so keys go to the shell.
+        bind-key -T copy-mode-vi MouseDragEnd1Pane send-keys -X copy-selection-no-clear \; if-shell -F '#{==:#{scroll_position},0}' 'send-keys -X cancel'
         bind-key -T copy-mode-vi DoubleClick1Pane send-keys -X select-word \; send-keys -X copy-selection-and-cancel
         bind-key -T copy-mode-vi TripleClick1Pane send-keys -X select-line \; send-keys -X copy-selection-and-cancel
         bind-key -T root DoubleClick1Pane select-pane -t = \; if-shell -F '#{||:#{pane_in_mode},#{mouse_any_flag}}' 'send-keys -M' 'copy-mode -H ; send-keys -X select-word ; run-shell -d 0.3 ; send-keys -X copy-selection-and-cancel'

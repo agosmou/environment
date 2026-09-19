@@ -46,6 +46,9 @@
       font-size = 16;
       cursor-style = "block";
       cursor-style-blink = false;
+      # Highlighting copies to the system clipboard (the default only feeds
+      # the middle-click primary selection on Linux).
+      copy-on-select = "clipboard";
       shell-integration = if pkgs.stdenv.hostPlatform.isDarwin then "zsh" else "bash";
       # Ghostty announces itself as TERM=xterm-ghostty, which remote hosts do
       # not know; without the ssh-* features, tmux over ssh fails with
