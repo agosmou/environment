@@ -655,6 +655,18 @@ do
     jsonls = {},
     eslint = {},
 
+    -- Typst. tinymist is installed with the Typst CLI (home/dev/typst.nix)
+    -- and attaches to .typ files (Neovim detects the filetype itself; the
+    -- Tree-sitter parser auto-installs on first open, SECTION 8). It
+    -- formats through its bundled typstyle, which conform picks up as the
+    -- LSP fallback, so typst needs no formatters_by_ft entry. It does not
+    -- write the PDF: run `typst watch doc.typ` in a split for that.
+    tinymist = {
+      settings = {
+        formatterMode = 'typstyle',
+      },
+    },
+
     -- Python language features: completion, go-to-def, hover, type checking.
     -- Pyrefly (Meta; stable 1.0 since May 2026, Rust, no Node inside). Nix
     -- installs the binary (home/neovim/default.nix); nvim-lspconfig ships the

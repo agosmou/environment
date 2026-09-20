@@ -13,6 +13,7 @@
     ../../home/dev/js.nix
     ../../home/dev/postgres.nix
     ../../home/dev/rust.nix
+    ../../home/dev/typst.nix
     ../../home/dev/uv.nix
     ../../home/dev/xcode.nix
     ../../home/git/gh.nix

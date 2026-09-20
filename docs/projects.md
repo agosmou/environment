@@ -19,6 +19,7 @@ The **global layer** is `home/dev/`, one file per tool, on every target:
 | bun, pnpm | JS/TS runtime and package managers | one global version |
 | cloudflared, wrangler | Cloudflare tunnels; Workers dev and deploy | one global version |
 | rustup, cargo-nextest | `cargo`, `rustc`, `clippy`, `rustfmt`; `cargo nextest run` | `~/.rustup/`, per toolchain |
+| typst, tinymist | PDFs from plain text; the language server (workstations only, [docs/typst.md](typst.md)) | one global version |
 
 Python type checking is pyrefly, inside Neovim and as `pyrefly check`. With
 no config it runs a lenient preset (so untyped code is not a wall of errors);

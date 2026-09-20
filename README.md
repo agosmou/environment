@@ -88,6 +88,7 @@ The daily loop is therefore: **edit, check, sync.**
 | Add a GUI app | `platform/fedora/packages` (Fedora) or `platform/darwin/Brewfile` (Mac), `just sync` |
 | Start or enter a project with its own tools | see [docs/projects.md](docs/projects.md) |
 | Work on a server and see its dev server in my browser | see [docs/remote-dev.md](docs/remote-dev.md) |
+| Write a document as a PDF | see [docs/typst.md](docs/typst.md) |
 | Update every package | `just update`, `just check`, `just sync`, commit `flake.lock` |
 
 ## New Machine
@@ -220,7 +221,7 @@ Every file in the repository, and what it is for.
 | `targets/<name>/home.nix` | One file per machine type; lists exactly which modules it imports and its per-machine switches | `just sync` |
 | `home/common.nix` | What every target shares: `just`, the recorded target name, the smoke-test registry | `just sync` |
 | `home/shell/` | bash (Linux), zsh (Mac), shared aliases and functions, and one file per command-line tool: atuin, bat, btop, direnv, fastfetch, fzf, starship, zoxide, `tools.nix` for plain binaries | `just sync` |
-| `home/dev/` | Language tooling, global: uv (Python), go + gopls, bun + pnpm, rustup + cargo-nextest, cloudflared + wrangler. A project's own flake wins inside its directory | `just sync` |
+| `home/dev/` | Language tooling, global: uv (Python), go + gopls, bun + pnpm, rustup + cargo-nextest, cloudflared + wrangler, typst + tinymist (workstations). A project's own flake wins inside its directory | `just sync` |
 | `home/git/` | git with delta; gh | `just sync` |
 | `home/ssh/` | ssh client config; Keychain on the Mac | `just sync` |
 | `home/neovim/` | Neovim, its language servers, formatters and debuggers, the Lua config, the plugin lock | `just sync` |
@@ -242,7 +243,7 @@ Every file in the repository, and what it is for.
 | `scripts/inventory` | Prints everything a target declares; read-only | `just inventory` |
 | `tests/bootstrap.sh` | Target-detection tests for `bootstrap` | `just check` |
 | `.github/workflows/check.yml` | CI: `nix flake check` on x86 Linux, ARM Linux, Apple Silicon, from a clean clone | push |
-| `docs/` | `nix.md` (how Nix works here, flakes, GUI apps), `neovim.md`, `tmux.md`, `remote-access.md`, `remote-dev.md`, `containers.md` | — |
+| `docs/` | `nix.md` (how Nix works here, flakes, GUI apps), `neovim.md`, `tmux.md`, `remote-access.md`, `remote-dev.md`, `containers.md`, `typst.md` | — |
 
 ## Adding A Target
 
@@ -414,3 +415,5 @@ Homebrew do not, so doctor lists the leftovers until you remove them.
   on the Fedora laptop when wanted.
 - [docs/projects.md](docs/projects.md): global language tools versus a
   project's own flake, direnv, and a template for starting a project.
+- [docs/typst.md](docs/typst.md): writing PDFs from plain text on a
+  workstation, the compile/watch loop, and what Neovim does with `.typ`.
