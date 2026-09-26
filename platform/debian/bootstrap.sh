@@ -48,18 +48,23 @@ fi
 
 # ---- 2. Tailscale: assert, do not install ----------------------------------------
 
-# Installed and joined by fleet (cloud-init at birth; `sudo tailscale up`
-# by hand on a machine built before that existed). If it is not running,
-# this is the wrong repository to fix it from.
+# Installed and joined by fleet (cloud-init at birth; `just join <name>`
+# for hardware it did not create). If it is not running, this is the wrong
+# repository to fix it from. Never plain `sudo tailscale up` here: that
+# joins the server as one of your devices, untagged, and the tailnet
+# policy then lets it reach them. fleet's join carries the server's tag.
 if systemctl is-active --quiet tailscaled; then
   printf 'tailscaled is running.\n'
+  if ! tailscale status >/dev/null 2>&1; then
+    printf 'Not on the tailnet yet. From the workstation: cd fleet && just join %s\n' "$(hostname -s)"
+  fi
 else
-  cat >&2 <<'MSG'
+  cat >&2 <<MSG
 tailscaled is not running. On a server, Tailscale is the fleet repository's
 job, not this one's:
   born via cloud-init?  sudo cloud-init status --long
-  built by hand?        curl -fsSL https://tailscale.com/install.sh | sh
-                        sudo tailscale up
+  built by hand?        from the workstation: cd fleet && just join $(hostname -s)
+                        (it prints the one command to run here)
 Then re-run this step.
 MSG
   exit 1

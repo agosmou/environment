@@ -409,7 +409,12 @@ if command -v tailscale >/dev/null 2>&1; then
       fi
     done < <(awk '/^Host /{print $2}' "$HOME/.ssh/config" 2>/dev/null)
   else
-    look "tailscale is installed but this machine has not joined the tailnet; once: sudo tailscale up"
+    case "$target" in
+      # A server joins tagged, through fleet; plain `tailscale up` would
+      # make it one of your devices (platform/debian/bootstrap.sh).
+      server-*) look "tailscale is installed but this machine has not joined the tailnet; from the workstation: cd fleet && just join $(hostname -s)" ;;
+      *) look "tailscale is installed but this machine has not joined the tailnet; once: sudo tailscale up" ;;
+    esac
   fi
 fi
 
