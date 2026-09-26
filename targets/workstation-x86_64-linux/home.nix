@@ -10,6 +10,7 @@
     ../../home/desktop/apps.nix
     ../../home/desktop/gnome.nix
     ../../home/desktop/keyd.nix
+    ../../home/desktop/syncthing.nix
     ../../home/desktop/wl-clipboard.nix
     ../../home/dev/cloudflare.nix
     ../../home/dev/go.nix

@@ -4,6 +4,7 @@
   imports = [
     ../../home/common.nix
     ../../home/desktop/macos.nix
+    ../../home/desktop/syncthing.nix
     ../../home/ai/claude-code.nix
     ../../home/ai/codex.nix
     ../../home/ai/opencode.nix
