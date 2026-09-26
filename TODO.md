@@ -4,9 +4,13 @@ Short list of what is next. Done items are deleted, not ticked.
 
 ## Next
 
-- Tailscale, after the install lands: `sudo tailscale up` on the laptop; check
-  the admin console for the Mac mini; disable key expiry on machines you do
-  not sit at. Then decide whether Tailscale's Mullvad exit nodes replace the
+- The house, the servers and the apps on them have their roadmap in the
+  private home-network repository (`TODO.md`); this list is only this
+  repository's.
+- Tailscale: t14s and spectre are on it; spectre is `tag:server` (fleet), so
+  its key never expires. Remaining: the Mac mini back on, and key expiry
+  disabled for it in the admin console if it is a machine you do not sit
+  at. Then decide whether Tailscale's Mullvad exit nodes replace the
   standalone Mullvad app (`docs/tailscale.md`, "Mullvad and Tailscale
   together").
 - Pi 4: a full `server-aarch64-linux` target (CI already builds and
