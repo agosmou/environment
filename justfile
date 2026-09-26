@@ -145,10 +145,19 @@ generations:
 # changes version until this is run. Afterwards: check, apply, use the
 # machine for a bit, then commit flake.lock. If something broke: rollback,
 # `git checkout flake.lock`, apply.
+#
+# nix does not share gh's credentials, so it resolves the flake inputs as an
+# anonymous GitHub client: 60 API requests an hour per IP, after which the
+# update dies on a 403 and writes nothing. --option access-tokens hands nix
+# the token gh already holds. Reading it at runtime is what keeps it out of
+# the repository and off disk, so this stays invisible to `just secrets`;
+# do not move it into nix.conf or nix.extraOptions.
 
 # Update flake.lock to the newest nixpkgs and home-manager
 update:
-  nix flake update --flake "{{repo}}"
+  @token="$(gh auth token 2>/dev/null)"; [[ -n "$token" ]] || { echo "no GitHub token; run: gh auth login" >&2; exit 1; }
+  nix flake update --flake "{{repo}}" \
+    --option access-tokens "github.com=$(gh auth token)"
 
 # ---- Before committing --------------------------------------------------------
 
