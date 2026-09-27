@@ -1,0 +1,12 @@
+# Installed by platform/fedora/bootstrap.sh as
+# /etc/udev/rules.d/60-environment-uinput.rules.
+#
+# Gives the logged-in user (not a group) read/write on /dev/uinput, so
+# dotool can create a virtual keyboard for Handy's dictation
+# (home/desktop/handy.nix). Same rule as Valve's steam-devices.
+#
+# Deliberately not dotool's own rule (GROUP="input"): on Fedora the input
+# group also owns /dev/input/event*, so joining it would let any program
+# running as the user read every keystroke. uaccess grants the active
+# session only, and grants injection, not reading.
+KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"

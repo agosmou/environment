@@ -9,6 +9,7 @@
     ../../home/ai/skills
     ../../home/desktop/apps.nix
     ../../home/desktop/gnome.nix
+    ../../home/desktop/handy.nix
     ../../home/desktop/keyd.nix
     ../../home/desktop/syncthing.nix
     ../../home/desktop/wl-clipboard.nix

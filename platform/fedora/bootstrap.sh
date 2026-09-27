@@ -14,6 +14,7 @@
 #   5. install the keyd key-remapping daemon as a system service
 #   6. install the battery charge-limit rule
 #   7. add the user to the wireshark group, for packet capture without root
+#   8. install the uinput rule that lets dotool type for Handy (dictation)
 #
 # Every step is idempotent: re-running after a package update or a config
 # change refreshes what changed and leaves the rest alone.
@@ -170,5 +171,15 @@ if ! id -nG "$USER" | tr ' ' '\n' | grep -qx wireshark; then
   sudo usermod -aG wireshark "$USER"
   printf 'Added %s to the wireshark group; log out and in for it to apply.\n' "$USER"
 fi
+
+# ---- 8. Virtual keyboard for dictation ---------------------------------------
+
+# Handy (home/desktop/handy.nix) types its transcription through dotool,
+# which needs /dev/uinput. The rule grants it to the logged-in user only;
+# see platform/fedora/uinput.rules for why not the input group. `trigger`
+# applies it now, without a reboot or logout.
+sudo install -m 0644 "$repo_dir/platform/fedora/uinput.rules" /etc/udev/rules.d/60-environment-uinput.rules
+sudo udevadm control --reload
+sudo udevadm trigger --name-match=uinput
 
 printf 'Fedora platform setup complete.\n'
