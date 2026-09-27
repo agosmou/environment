@@ -5,6 +5,10 @@
 
 {
   home.packages = [
+    # age: small modern file encryption (age-keygen makes a key pair). Used by
+    # home-network's encrypted backups: spectre encrypts to a public key,
+    # only t14s's private key decrypts.
+    pkgs.age
     pkgs.curl
     pkgs.eza # ls replacement; the ll and la aliases use it
     pkgs.fd # find replacement; also used by Neovim's file picker
@@ -16,6 +20,7 @@
   ];
 
   custom.smoke = {
+    age = "age --version";
     curl = "curl --version";
     eza = "eza --version";
     fd = "fd --version";
