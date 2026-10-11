@@ -17,6 +17,11 @@
 #   ChatGPT/Codex desktop  OpenAI's own rpm, in platform/fedora/packages
 #   Mullvad                needs a root daemon, so Mullvad's rpm, same place
 #   Claude Desktop         Anthropic ships no Fedora build yet (TODO.md)
+#
+# Linux only, not in the Brewfile: LMMS and Audacity stand in for GarageBand,
+# which the Mac already has. LMMS is where the Launchkey Mini plays (piano
+# roll, beats, built-in synths); Audacity records and edits audio. Both are
+# built from source by nixpkgs.
 { pkgs, ... }:
 
 {
@@ -25,5 +30,7 @@
     pkgs.slack
     pkgs.discord
     pkgs.obsidian
+    pkgs.lmms
+    pkgs.audacity
   ];
 }

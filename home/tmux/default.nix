@@ -42,12 +42,18 @@ let
   rightX = lib.optionalString cfg.laptopWidgets " #{battery_icon} #{battery_percentage} #{online_status}";
   rightY = "#{?${wide}, %a %H:%M  ·  %F, %H:%M}";
   rightZ = " #{USER}@#h";
+
+  # nixpkgs 2026-10-10: sesh runs mockery at build time, and mockery cannot
+  # read Go 1.27's export data, so sesh does not build (and is not cached).
+  # Build it, and its mockery, with Go 1.26. Remove once this is closed:
+  # https://github.com/NixOS/nixpkgs/issues/572848
+  sesh = pkgs.sesh.override { buildGo127Module = pkgs.buildGo126Module; };
 in
 {
   options.custom.tmux.laptopWidgets = lib.mkEnableOption "battery and online-status segments";
 
   config = {
-    home.packages = [ pkgs.sesh ] ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [ pkgs.procps ];
+    home.packages = [ sesh ] ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [ pkgs.procps ];
     custom.smoke = {
       tmux = "tmux -V";
       sesh = "sesh --version";
